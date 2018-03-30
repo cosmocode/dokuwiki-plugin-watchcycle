@@ -9,8 +9,12 @@
 // $lang['menu'] = 'Your menu entry';
 
 // custom language strings for the plugin
-// $lang['fixme'] = 'FIXME';
+$lang['maintained by'] = 'maintained by %s';
+$lang['last check'] = 'last check %d days ago';
+$lang['since last check'] = '%s since last check';
 
+$lang['change singular'] = 'change';
+$lang['change plural'] = 'changes';
 
 
 //Setup VIM: ex: et ts=4 :

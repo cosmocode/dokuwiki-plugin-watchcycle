@@ -15,7 +15,7 @@ class admin_plugin_watchcycle extends DokuWiki_Admin_Plugin {
      * @return int sort number in admin menu
      */
     public function getMenuSort() {
-        return FIXME;
+        return 1;
     }
 
     /**
