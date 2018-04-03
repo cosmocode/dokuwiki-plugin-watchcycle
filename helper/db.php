@@ -47,6 +47,9 @@ class helper_plugin_watchcycle_db extends DokuWiki_Plugin {
             $this->sqlite = null;
             return;
         }
+
+        $helper = plugin_load('helper', 'watchcycle');
+        $this->sqlite->create_function('DAYS_AGO', array($helper, 'daysAgo'), 1);
     }
 
     /**
@@ -78,7 +81,6 @@ class helper_plugin_watchcycle_db extends DokuWiki_Plugin {
         clearstatcache(true, $file);
         $this->init();
     }
-
 }
 
 // vim:ts=4:sw=4:et:

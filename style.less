@@ -1,0 +1,43 @@
+// Variables
+@check-ok-color: #355723;
+@chekc-needed-color: #840705;
+
+#plugin__watchcycle {
+    display: inline-block;
+    padding: 1em 0.2em;
+    border: 1px solid #000;
+
+    svg {
+        width: 48px;
+        height: 48px;
+        fill: @check-ok-color;
+    }
+
+    .column {
+        display: table-cell;
+        vertical-align: top;
+        padding-right: .8em;
+    }
+
+    &.check_needed {
+        svg {
+            fill: @chekc-needed-color;
+        }
+    }
+}
+
+#plugin__watchcycle_admin {
+    form {
+        display: block;
+        margin-bottom: .5em;
+
+        label[class=outdated] {
+            display: block;
+            margin-top: 0.4em;
+        }
+
+        input[name=filter] {
+            margin-right: .5em;
+        }
+    }
+}

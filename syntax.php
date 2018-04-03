@@ -105,28 +105,54 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin {
      * @param array          $data      The data from the handler() function
      */
     public function render_xhtml(Doku_Renderer $renderer, $data) {
-        global $ID, $auth;
+        global $ID;
+        /** @var \DokuWiki_Auth_Plugin $auth */
+        global $auth;
+
+        /* @var \helper_plugin_watchcycle */
+        $helper = plugin_load('helper', 'watchcycle');
 
         $watchcycle = p_get_metadata($ID, 'plugin watchcycle');
 
-        var_dump($watchcycle);
+        $days_ago = $helper->daysAgo($watchcycle['last_maintainer_rev']);
 
-        $renderer->doc .= '<div id="plugin__watchcycle">' . NL;
+        $check_needed = false;
+        if ($days_ago > $watchcycle['cycle']) {
+            $check_needed = true;
+        }
 
-        $maintainer_link = $watchcycle['maintainer'];
+        $class = '';
+        if ($check_needed) {
+            $class = 'class="check_needed"';
+        }
+        $renderer->doc .= '<div id="plugin__watchcycle" ' . $class . '>' . NL;
+        $renderer->doc .= '<div class="column">';
+        $renderer->doc  .= inlineSVG(DOKU_PLUGIN . 'watchcycle/admin.svg');
+        $renderer->doc .= '</div>';
+
+        $renderer->doc .= '<div class="column">';
+        $user = $watchcycle['maintainer'];
+        $userData = $auth->getUserData($user);
+        $maintainer_link = $this->email($userData['mail'], $userData['name']);
         $renderer->doc .= sprintf($this->getLang('maintained by'), $maintainer_link) . '<br />'. NL;
 
-//        $last_maintainer_rev = new DateTime('@' . $watchcycle['last_maintainer_rev']);
-//        $interval = $last_maintainer_rev->diff(new DateTime());
-//        $days_ago = (int) $interval->format('%a');
+        $renderer->doc .= sprintf($this->getLang('last check'), $days_ago);
+        if ($check_needed) {
+            $renderer->doc .= ' (' . $this->getLang('check needed') . ')';
+        }
+        $renderer->doc .= '<br />'. NL;
 
-        $days_ago = (time() - $watchcycle['last_maintainer_rev']) / (60 * 60 * 24);
-        $renderer->doc .= sprintf($this->getLang('last check'), $days_ago) . '<br />'. NL;
+        if ($watchcycle['changes'] == -1) {
+            $renderer->doc .= $this->getLang('never checked') .  '<br />'. NL;
+        } else {
+            $urlParameters = ['rev' => $watchcycle['last_maintainer_rev'], 'do' => 'diff'];
+            $changes_lang = $this->getLang('change ' . ($watchcycle['changes'] == 1 ? 'singular' : 'plural'));
+            $changes_link = $watchcycle['changes'] . ' ' . $changes_lang;
+            $changes_link = '<a href="'.wl($ID, $urlParameters).'">' . $changes_link . '</a>';
+            $renderer->doc .= sprintf($this->getLang('since last check'), $changes_link) . '<br />'. NL;
+        }
 
-        $changes_lang = $this->getLang('changes ' . $watchcycle['changes'] == 1 ? 'singular' : 'plural');
-        $changes_link = $watchcycle['changes'] . ' ' . $changes_lang;
-
-        $renderer->doc .= sprintf($this->getLang('since last check'), $changes_link) . '<br />'. NL;
+        $renderer->doc .= '</div>';
 
         $renderer->doc .= '</div>';
     }
