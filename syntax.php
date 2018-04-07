@@ -136,15 +136,17 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin {
         $maintainer_link = $this->email($userData['mail'], $userData['name']);
         $renderer->doc .= sprintf($this->getLang('maintained by'), $maintainer_link) . '<br />'. NL;
 
-        $renderer->doc .= sprintf($this->getLang('last check'), $days_ago);
-        if ($check_needed) {
-            $renderer->doc .= ' (' . $this->getLang('check needed') . ')';
-        }
-        $renderer->doc .= '<br />'. NL;
 
         if ($watchcycle['changes'] == -1) {
-            $renderer->doc .= $this->getLang('never checked') .  '<br />'. NL;
+            $renderer->doc .= $this->getLang('never checked');
+            $renderer->doc .= ' (' . $this->getLang('check needed') . ')'.  '<br />'. NL;
         } else {
+            $renderer->doc .= sprintf($this->getLang('last check'), $days_ago);
+            if ($check_needed) {
+                $renderer->doc .= ' (' . $this->getLang('check needed') . ')';
+            }
+            $renderer->doc .= '<br />'. NL;
+
             $urlParameters = ['rev' => $watchcycle['last_maintainer_rev'], 'do' => 'diff'];
             $changes_lang = $this->getLang('change ' . ($watchcycle['changes'] == 1 ? 'singular' : 'plural'));
             $changes_link = $watchcycle['changes'] . ' ' . $changes_lang;

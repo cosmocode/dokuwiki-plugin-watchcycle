@@ -28,4 +28,11 @@ $lang['h cycle'] = 'cycle';
 $lang['h current'] = 'current';
 $lang['h uptodate'] = 'uptodate?';
 
+// mail
+$lang['mail subject'] = 'Page maintenance needed';
+$lang['mail body'] = '%s has exceed maintenance cycle and needs checking.';
+
+// error
+$lang['error mail'] = 'Cannot send mail to maintainer.';
+
 //Setup VIM: ex: et ts=4 :

@@ -21,7 +21,8 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
 
        $controller->register_hook('PARSER_METADATA_RENDER', 'AFTER', $this, 'handle_parser_metadata_render');
        $controller->register_hook('PARSER_CACHE_USE', 'AFTER', $this, 'handle_parser_cache_use');
-
+       // ensure a page revision is created when summary changes:
+       $controller->register_hook('COMMON_WIKIPAGE_SAVE', 'BEFORE', $this, 'handle_pagesave_before');
     }
 
     /**
@@ -34,6 +35,8 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
      */
 
     public function handle_parser_metadata_render(Doku_Event &$event, $param) {
+        global $ID;
+
         /** @var \helper_plugin_sqlite $sqlite */
         $sqlite = plugin_load('helper', 'watchcycle_db')->getDB();
         /* @var \helper_plugin_watchcycle */
@@ -54,7 +57,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
                 $entry['last_maintainer_rev'] = $last_maintainer_rev;
                 $entry['uptodate'] = $uptodate;
                 if ($uptodate == '0') {
-                    $this->informMaintainer();
+                    $this->informMaintainer($watchcycle['maintainer'], $ID);
                 }
 
                 $sqlite->storeEntry('watchcycle', $entry);
@@ -77,7 +80,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
                 if ($row['uptodate'] != $uptodate) {
                     $toupdate['uptodate'] = $uptodate;
                     if (!$uptodate) {
-                        $this->informMaintainer();
+                        $this->informMaintainer($watchcycle['maintainer'], $ID);
                     }
                 }
 
@@ -99,8 +102,8 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
     /**
      * @param array  $meta metadata of the page
      * @param string $maintanier
-     * @param int    $rev revision of the last page edition by maintainer or create date if no edition was made
-     * @return int   number of changes since last maintainer's revision
+     * @param int    $rev revision of the last page edition by maintainer or -1 if no edition was made
+     * @return int   number of changes since last maintainer's revision or -1 if no changes was made
      */
     protected function getLastMaintainerRev($meta, $maintanier, &$rev) {
 
@@ -126,16 +129,37 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
             }
         }
 
-        $rev = $meta['current']['date']['created'];
+        $rev = -1;
         return -1;
     }
 
-    protected function informMaintainer() {
-        //TODO
+    /**
+     * inform the maintanier that the page needs checking
+     *
+     * @param string $user name of the maintanier
+     * @param string $page that needs checking
+     */
+    protected function informMaintainer($user, $page) {
+        /* @var DokuWiki_Auth_Plugin */
+        global $auth;
+
+        $data = $auth->getUserData($user);
+
+        $mailer = new Mailer();
+        $mailer->to($data['mail']);
+        $mailer->subject($this->getLang('mail subject'));
+        $text = sprintf($this->getLang('mail body'), $page);
+        $link = '<a href="' . wl($page, '', true) . '">' . $page . '</a>';
+        $html = sprintf($this->getLang('mail body'), $link);
+        $mailer->setBody($text, null, null, $html);
+
+        if (!$mailer->send()) {
+            msg($this->getLang('error mail'), -1);
+        }
     }
 
     /**
-     * Clean the cache every 24 hours
+     * clean the cache every 24 hours
      *
      * @param Doku_Event $event  event object by reference
      * @param mixed      $param  [the parameters passed as fifth argument to register_hook() when this
@@ -150,6 +174,27 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
         if ($helper->daysAgo($event->data->_time) >= 1) {
             $event->result = false;
         }
+    }
+
+    /**
+     * Check if the page has to be changed
+     *
+     * @param Doku_Event $event  event object by reference
+     * @param mixed      $param  [the parameters passed as fifth argument to register_hook() when this
+     *                           handler was registered]
+     * @return void
+     */
+
+    public function handle_pagesave_before(Doku_Event &$event, $param) {
+        if($event->data['contentChanged']) return false; // will be saved for page changes
+        global $ACT;
+
+        //save page if summary is provided
+        if(!empty($event->data['summary'])) {
+            $event->data['contentChanged'] = true;
+        }
+
+        return true;
     }
 
 }
