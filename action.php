@@ -70,13 +70,12 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
      *                           handler was registered]
      * @return void
      */
-
-    public function handle_parser_metadata_render(Doku_Event &$event, $param) {
+    public function handle_parser_metadata_render(Doku_Event $event, $param) {
         global $ID;
 
         /** @var \helper_plugin_sqlite $sqlite */
         $sqlite = plugin_load('helper', 'watchcycle_db')->getDB();
-        /* @var \helper_plugin_watchcycle */
+        /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
 
         $page = $event->data['current']['last_change']['id'];
@@ -203,9 +202,8 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
      *                           handler was registered]
      * @return void
      */
-
-    public function handle_parser_cache_use(Doku_Event &$event, $param) {
-        /* @var \helper_plugin_watchcycle */
+    public function handle_parser_cache_use(Doku_Event $event, $param) {
+        /* @var \helper_plugin_watchcycle $helper*/
         $helper = plugin_load('helper', 'watchcycle');
 
         if ($helper->daysAgo($event->data->_time) >= 1) {
@@ -221,19 +219,22 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
      *                           handler was registered]
      * @return void
      */
-
-    public function handle_pagesave_before(Doku_Event &$event, $param) {
-        if($event->data['contentChanged']) return false; // will be saved for page changes
+    public function handle_pagesave_before(Doku_Event $event, $param) {
+        if($event->data['contentChanged']) return; // will be saved for page changes
         global $ACT;
 
         //save page if summary is provided
         if(!empty($event->data['summary'])) {
             $event->data['contentChanged'] = true;
         }
-
-        return true;
     }
 
+    /**
+     * called for event SEARCH_RESULT_PAGELOOKUP
+     *
+     * @param Doku_Event $event
+     * @param            $param
+     */
     public function addIconToPageLookupResult(Doku_Event $event, $param)
     {
         /* @var \helper_plugin_watchcycle $helper*/
@@ -245,6 +246,12 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
         }
     }
 
+    /**
+     * called for event SEARCH_RESULT_FULLPAGE
+     *
+     * @param Doku_Event $event
+     * @param            $param
+     */
     public function addIconToFullPageResult(Doku_Event $event, $param)
     {
         /* @var \helper_plugin_watchcycle $helper*/
