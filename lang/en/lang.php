@@ -18,6 +18,8 @@ $lang['never checked'] = 'never checked';
 $lang['change singular'] = 'change';
 $lang['change plural'] = 'changes';
 
+$lang['cb only maintained pages'] = 'Only maintained pages';
+
 // admin
 $lang['search page'] = 'search page';
 $lang['btn filter'] = 'Filter';

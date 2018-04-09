@@ -25,6 +25,41 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
        $controller->register_hook('COMMON_WIKIPAGE_SAVE', 'BEFORE', $this, 'handle_pagesave_before');
        $controller->register_hook('SEARCH_RESULT_PAGELOOKUP', 'BEFORE', $this, 'addIconToPageLookupResult');
        $controller->register_hook('SEARCH_RESULT_FULLPAGE', 'BEFORE', $this, 'addIconToFullPageResult');
+       $controller->register_hook('FORM_SEARCH_OUTPUT', 'BEFORE', $this, 'addFilterToSearchForm');
+       $controller->register_hook('SEARCH_QUERY_FULLPAGE', 'AFTER', $this, 'filterSearchResults');
+       $controller->register_hook('SEARCH_QUERY_PAGELOOKUP', 'AFTER', $this, 'filterSearchResults');
+    }
+
+    /**
+     * Add a checkbox to the search form to allow limiting the search to maintained pages only
+     *
+     * @param Doku_Event $event
+     * @param            $param
+     */
+    public function addFilterToSearchForm(Doku_Event $event, $param)
+    {
+        /* @var \dokuwiki\Form\Form $searchForm */
+        $searchForm = $event->data;
+        $advOptionsPos = $searchForm->findPositionByAttribute('class', 'advancedOptions');
+        $searchForm->addCheckbox('watchcycle_only', $this->getLang('cb only maintained pages'), $advOptionsPos + 1)
+        ->addClass('plugin__watchcycle_searchform_cb');
+    }
+
+    /**
+     * Filter the search results to show only maintained pages, if  watchcycle_only is true in $INPUT
+     *
+     * @param Doku_Event $event
+     * @param            $param
+     */
+    public function filterSearchResults(Doku_Event $event, $param)
+    {
+        global $INPUT;
+        if($INPUT->bool('watchcycle_only')) {
+            $event->result = array_filter($event->result, function ($key) {
+                $watchcycle = p_get_metadata($key, 'plugin watchcycle');
+                return !empty($watchcycle);
+            }, ARRAY_FILTER_USE_KEY);
+        }
     }
 
     /**
