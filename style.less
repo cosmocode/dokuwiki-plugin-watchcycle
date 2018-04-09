@@ -2,6 +2,22 @@
 @check-ok-color: #355723;
 @chekc-needed-color: #840705;
 
+.plugin__watchcycle_searchresult_icon {
+
+    svg {
+        fill: @check-ok-color;
+        width: 19px;
+        vertical-align: top;
+    }
+
+    &.check_needed {
+        svg {
+            fill: @chekc-needed-color;
+        }
+    }
+}
+
+
 #plugin__watchcycle {
     display: inline-block;
     padding: 1em 0.2em;
