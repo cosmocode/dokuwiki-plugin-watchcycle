@@ -54,12 +54,13 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
     public function filterSearchResults(Doku_Event $event, $param)
     {
         global $INPUT;
-        if($INPUT->bool('watchcycle_only')) {
-            $event->result = array_filter($event->result, function ($key) {
-                $watchcycle = p_get_metadata($key, 'plugin watchcycle');
-                return !empty($watchcycle);
-            }, ARRAY_FILTER_USE_KEY);
+        if (!$INPUT->bool('watchcycle_only')) {
+            return;
         }
+        $event->result = array_filter($event->result, function ($key) {
+            $watchcycle = p_get_metadata($key, 'plugin watchcycle');
+            return !empty($watchcycle);
+        }, ARRAY_FILTER_USE_KEY);
     }
 
     /**
