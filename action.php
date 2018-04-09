@@ -277,7 +277,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
 
         $user = $watchcycle['maintainer'];
         $userData = $auth->getUserData($user);
-        $title = sprintf($this->getLang('maintained by'), $userData['name']) . '. ';
+        $title = sprintf($this->getLang('maintained by'), $userData['name']) . ' ';
 
         if ($watchcycle['changes'] === -1) {
             $title .= $this->getLang('never checked');

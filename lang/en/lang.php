@@ -9,11 +9,11 @@
 $lang['menu'] = 'Watchcycle Managment';
 
 // custom language strings for the plugin
-$lang['maintained by'] = 'maintained by %s';
-$lang['last check'] = 'last check %d days ago';
-$lang['check needed'] = 'check needed!';
-$lang['since last check'] = '%s since last check';
-$lang['never checked'] = 'never checked';
+$lang['maintained by'] = 'Maintained by %s.';
+$lang['last check'] = 'Last check %d days ago.';
+$lang['check needed'] = 'Check needed!';
+$lang['since last check'] = '%s since last check.';
+$lang['never checked'] = 'Never checked.';
 
 $lang['change singular'] = 'change';
 $lang['change plural'] = 'changes';
@@ -28,11 +28,11 @@ $lang['h page'] = 'page';
 $lang['h maintainer'] = 'maintainer';
 $lang['h cycle'] = 'cycle';
 $lang['h current'] = 'current';
-$lang['h uptodate'] = 'uptodate?';
+$lang['h uptodate'] = 'up-to-date?';
 
 // mail
 $lang['mail subject'] = 'Page maintenance needed';
-$lang['mail body'] = '%s has exceed maintenance cycle and needs checking.';
+$lang['mail body'] = '%s has exceeded maintenance cycle and needs checking.';
 
 // error
 $lang['error mail'] = 'Cannot send mail to maintainer.';
