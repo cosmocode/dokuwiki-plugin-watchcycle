@@ -23,6 +23,44 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
        $controller->register_hook('PARSER_CACHE_USE', 'AFTER', $this, 'handle_parser_cache_use');
        // ensure a page revision is created when summary changes:
        $controller->register_hook('COMMON_WIKIPAGE_SAVE', 'BEFORE', $this, 'handle_pagesave_before');
+       $controller->register_hook('SEARCH_RESULT_PAGELOOKUP', 'BEFORE', $this, 'addIconToPageLookupResult');
+       $controller->register_hook('SEARCH_RESULT_FULLPAGE', 'BEFORE', $this, 'addIconToFullPageResult');
+       $controller->register_hook('FORM_SEARCH_OUTPUT', 'BEFORE', $this, 'addFilterToSearchForm');
+       $controller->register_hook('SEARCH_QUERY_FULLPAGE', 'AFTER', $this, 'filterSearchResults');
+       $controller->register_hook('SEARCH_QUERY_PAGELOOKUP', 'AFTER', $this, 'filterSearchResults');
+    }
+
+    /**
+     * Add a checkbox to the search form to allow limiting the search to maintained pages only
+     *
+     * @param Doku_Event $event
+     * @param            $param
+     */
+    public function addFilterToSearchForm(Doku_Event $event, $param)
+    {
+        /* @var \dokuwiki\Form\Form $searchForm */
+        $searchForm = $event->data;
+        $advOptionsPos = $searchForm->findPositionByAttribute('class', 'advancedOptions');
+        $searchForm->addCheckbox('watchcycle_only', $this->getLang('cb only maintained pages'), $advOptionsPos + 1)
+        ->addClass('plugin__watchcycle_searchform_cb');
+    }
+
+    /**
+     * Filter the search results to show only maintained pages, if  watchcycle_only is true in $INPUT
+     *
+     * @param Doku_Event $event
+     * @param            $param
+     */
+    public function filterSearchResults(Doku_Event $event, $param)
+    {
+        global $INPUT;
+        if (!$INPUT->bool('watchcycle_only')) {
+            return;
+        }
+        $event->result = array_filter($event->result, function ($key) {
+            $watchcycle = p_get_metadata($key, 'plugin watchcycle');
+            return !empty($watchcycle);
+        }, ARRAY_FILTER_USE_KEY);
     }
 
     /**
@@ -33,13 +71,12 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
      *                           handler was registered]
      * @return void
      */
-
-    public function handle_parser_metadata_render(Doku_Event &$event, $param) {
+    public function handle_parser_metadata_render(Doku_Event $event, $param) {
         global $ID;
 
         /** @var \helper_plugin_sqlite $sqlite */
         $sqlite = plugin_load('helper', 'watchcycle_db')->getDB();
-        /* @var \helper_plugin_watchcycle */
+        /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
 
         $page = $event->data['current']['last_change']['id'];
@@ -166,9 +203,8 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
      *                           handler was registered]
      * @return void
      */
-
-    public function handle_parser_cache_use(Doku_Event &$event, $param) {
-        /* @var \helper_plugin_watchcycle */
+    public function handle_parser_cache_use(Doku_Event $event, $param) {
+        /* @var \helper_plugin_watchcycle $helper*/
         $helper = plugin_load('helper', 'watchcycle');
 
         if ($helper->daysAgo($event->data->_time) >= 1) {
@@ -184,19 +220,49 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
      *                           handler was registered]
      * @return void
      */
-
-    public function handle_pagesave_before(Doku_Event &$event, $param) {
-        if($event->data['contentChanged']) return false; // will be saved for page changes
+    public function handle_pagesave_before(Doku_Event $event, $param) {
+        if($event->data['contentChanged']) return; // will be saved for page changes
         global $ACT;
 
         //save page if summary is provided
         if(!empty($event->data['summary'])) {
             $event->data['contentChanged'] = true;
         }
-
-        return true;
     }
 
+    /**
+     * called for event SEARCH_RESULT_PAGELOOKUP
+     *
+     * @param Doku_Event $event
+     * @param            $param
+     */
+    public function addIconToPageLookupResult(Doku_Event $event, $param)
+    {
+        /* @var \helper_plugin_watchcycle $helper*/
+        $helper = plugin_load('helper', 'watchcycle');
+
+        $icon = $helper->getSearchResultIconHTML($event->data['page']);
+        if ($icon) {
+            $event->data['listItemContent'][] = $icon;
+        }
+    }
+
+    /**
+     * called for event SEARCH_RESULT_FULLPAGE
+     *
+     * @param Doku_Event $event
+     * @param            $param
+     */
+    public function addIconToFullPageResult(Doku_Event $event, $param)
+    {
+        /* @var \helper_plugin_watchcycle $helper*/
+        $helper = plugin_load('helper', 'watchcycle');
+
+        $icon = $helper->getSearchResultIconHTML($event->data['page']);
+        if ($icon) {
+            $event->data['resultHeader'][] = $icon;
+        }
+    }
 }
 
 // vim:ts=4:sw=4:et:
