@@ -36,5 +36,6 @@ $lang['mail body'] = '%s has exceeded maintenance cycle and needs checking.';
 
 // error
 $lang['error mail'] = 'Cannot send mail to maintainer.';
+$lang['error sqlite missing'] = 'The watchcycle plugin requires the <a href="https://www.dokuwiki.org/plugin:sqlite">sqlite plugin</a> to work.';
 
 //Setup VIM: ex: et ts=4 :

@@ -43,10 +43,13 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin {
      * @return array Data for the renderer
      */
     public function handle($match, $state, $pos, Doku_Handler $handler){
-        /* @var DokuWiki_Auth_Plugin */
+        /* @var DokuWiki_Auth_Plugin $auth */
         global $auth;
 
-        $data = array();
+        if (!plugin_load('helper', 'sqlite')) {
+            msg($this->getLang('error sqlite missing'), -1);
+            return false;
+        }
         if (!preg_match('/~~WATCHCYCLE:[^:]+:\d+~~/', $match)) {
             msg('watchcycle: invalid syntax', -1);
             return false;
@@ -109,7 +112,7 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin {
         /** @var \DokuWiki_Auth_Plugin $auth */
         global $auth;
 
-        /* @var \helper_plugin_watchcycle */
+        /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
 
         $watchcycle = p_get_metadata($ID, 'plugin watchcycle');
