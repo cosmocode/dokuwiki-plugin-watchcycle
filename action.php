@@ -76,6 +76,10 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
 
         /** @var \helper_plugin_sqlite $sqlite */
         $sqlite = plugin_load('helper', 'watchcycle_db')->getDB();
+        if (!$sqlite) {
+            msg($this->getLang('error sqlite missing'), -1);
+            return;
+        }
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
 

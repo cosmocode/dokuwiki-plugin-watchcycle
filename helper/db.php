@@ -62,7 +62,7 @@ class helper_plugin_watchcycle_db extends DokuWiki_Plugin {
             $this->init();
         }
         if(!$this->sqlite) {
-            msg('watchcycle: no sqlite', -1);
+            msg($this->getLang('error sqlite missing'), -1);
             return false;
         }
         return $this->sqlite;
