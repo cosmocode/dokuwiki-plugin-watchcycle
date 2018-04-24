@@ -28,6 +28,25 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
        $controller->register_hook('FORM_SEARCH_OUTPUT', 'BEFORE', $this, 'addFilterToSearchForm');
        $controller->register_hook('SEARCH_QUERY_FULLPAGE', 'AFTER', $this, 'filterSearchResults');
        $controller->register_hook('SEARCH_QUERY_PAGELOOKUP', 'AFTER', $this, 'filterSearchResults');
+
+        $controller->register_hook('TOOLBAR_DEFINE', 'AFTER', $this, 'handle_toolbar_define');
+    }
+
+
+    /**
+     * Register a new toolbar button
+     *
+     * @param Doku_Event $event event object by reference
+     * @param mixed $param [the parameters passed as fifth argument to register_hook() when this
+     *                           handler was registered]
+     * @return void
+     */
+    public function handle_toolbar_define(Doku_Event $event, $param) {
+        $event->data[] = array(
+            'type' => 'plugin_watchcycle',
+            'title' => $this->getLang('title toolbar button'),
+            'icon' => DOKU_BASE . 'lib/plugins/watchcycle/images/eye-plus16Green.png',
+        );
     }
 
     /**
