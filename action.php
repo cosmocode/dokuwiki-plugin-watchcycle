@@ -44,7 +44,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
     public function handle_toolbar_define(Doku_Event $event, $param) {
         $event->data[] = array(
             'type' => 'plugin_watchcycle',
-            'title' => 'Add new maintenance syntax',
+            'title' => $this->getLang('title toolbar button'),
             'icon' => DOKU_BASE . 'lib/plugins/watchcycle/images/eye-plus16Green.png',
         );
     }
