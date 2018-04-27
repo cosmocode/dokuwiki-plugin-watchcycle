@@ -26,6 +26,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
        $controller->register_hook('SEARCH_RESULT_PAGELOOKUP', 'BEFORE', $this, 'addIconToPageLookupResult');
        $controller->register_hook('SEARCH_RESULT_FULLPAGE', 'BEFORE', $this, 'addIconToFullPageResult');
        $controller->register_hook('FORM_SEARCH_OUTPUT', 'BEFORE', $this, 'addFilterToSearchForm');
+        $controller->register_hook('FORM_QUICKSEARCH_OUTPUT', 'BEFORE', $this, 'handle_form_quicksearch_output');
        $controller->register_hook('SEARCH_QUERY_FULLPAGE', 'AFTER', $this, 'filterSearchResults');
        $controller->register_hook('SEARCH_QUERY_PAGELOOKUP', 'AFTER', $this, 'filterSearchResults');
 
@@ -62,6 +63,22 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
         $advOptionsPos = $searchForm->findPositionByAttribute('class', 'advancedOptions');
         $searchForm->addCheckbox('watchcycle_only', $this->getLang('cb only maintained pages'), $advOptionsPos + 1)
         ->addClass('plugin__watchcycle_searchform_cb');
+    }
+
+    /**
+     * Handles the FORM_QUICKSEARCH_OUTPUT event
+     *
+     * @param Doku_Event $event  event object by reference
+     * @param mixed      $param  [the parameters passed as fifth argument to register_hook() when this
+     *                           handler was registered]
+     * @return void
+     */
+    public function handle_form_quicksearch_output(Doku_Event $event, $param) {
+        /** @var \dokuwiki\Form\Form $qsearchForm */
+        $qsearchForm = $event->data;
+        if ($this->getConf('default_maintained_only')) {
+            $qsearchForm->setHiddenField('watchcycle_only', '1');
+        }
     }
 
     /**
