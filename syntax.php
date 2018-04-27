@@ -7,20 +7,25 @@
  */
 
 // must be run within Dokuwiki
-if (!defined('DOKU_INC')) die();
+if (!defined('DOKU_INC')) {
+    die();
+}
 
-class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin {
+class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin
+{
     /**
      * @return string Syntax mode type
      */
-    public function getType() {
+    public function getType()
+    {
         return 'disabled';
     }
 
     /**
      * @return int Sort order - Low numbers go before high numbers
      */
-    public function getSort() {
+    public function getSort()
+    {
         return 100;
     }
 
@@ -29,20 +34,23 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin {
      *
      * @param string $mode Parser mode
      */
-    public function connectTo($mode) {
-        $this->Lexer->addSpecialPattern('~~WATCHCYCLE.*~~',$mode,'plugin_watchcycle');
+    public function connectTo($mode)
+    {
+        $this->Lexer->addSpecialPattern('~~WATCHCYCLE.*~~', $mode, 'plugin_watchcycle');
     }
 
     /**
      * Handle matches of the watchcycle syntax. We assume that maintainer name doesn't contain semicolons.
      *
-     * @param string          $match   The match of the syntax
-     * @param int             $state   The state of the handler
-     * @param int             $pos     The position in the document
-     * @param Doku_Handler    $handler The handler
+     * @param string       $match   The match of the syntax
+     * @param int          $state   The state of the handler
+     * @param int          $pos     The position in the document
+     * @param Doku_Handler $handler The handler
+     *
      * @return array Data for the renderer
      */
-    public function handle($match, $state, $pos, Doku_Handler $handler){
+    public function handle($match, $state, $pos, Doku_Handler $handler)
+    {
         /* @var DokuWiki_Auth_Plugin $auth */
         global $auth;
 
@@ -55,16 +63,16 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin {
             return false;
         }
 
-        $match = substr($match, strlen('~~WATCHCYCLE:'), strlen($match)-2);
+        $match = substr($match, strlen('~~WATCHCYCLE:'), strlen($match) - 2);
 
         list($maintainer, $cycle) = array_map('trim', explode(':', $match));
 
         if ($auth->getUserData($maintainer) === false) {
-            msg( 'watchcycle: maintainer must be a dokuwiki user', -1);
+            msg('watchcycle: maintainer must be a dokuwiki user', -1);
             return false;
         }
 
-        $data = ['maintainer' => $maintainer, 'cycle' => (int) $cycle];
+        $data = ['maintainer' => $maintainer, 'cycle' => (int)$cycle];
 
         return $data;
     }
@@ -72,18 +80,22 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin {
     /**
      * Render xhtml output or metadata
      *
-     * @param string         $mode      Renderer mode (supported modes: xhtml)
-     * @param Doku_Renderer  $renderer  The renderer
-     * @param array          $data      The data from the handler() function
+     * @param string        $mode     Renderer mode (supported modes: xhtml)
+     * @param Doku_Renderer $renderer The renderer
+     * @param array         $data     The data from the handler() function
+     *
      * @return bool If rendering was successful.
      */
 
-    public function render($mode, Doku_Renderer $renderer, $data) {
-        if(!$data) return false;
+    public function render($mode, Doku_Renderer $renderer, $data)
+    {
+        if (!$data) {
+            return false;
+        }
 
         $method = "render_$mode";
         if (method_exists($this, $method)) {
-            call_user_func(array($this, $method), $renderer, $data);
+            call_user_func([$this, $method], $renderer, $data);
             return true;
         }
         return false;
@@ -92,10 +104,11 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin {
     /**
      * Render metadata
      *
-     * @param Doku_Renderer  $renderer  The renderer
-     * @param array          $data      The data from the handler() function
+     * @param Doku_Renderer $renderer The renderer
+     * @param array         $data     The data from the handler() function
      */
-    public function render_metadata(Doku_Renderer $renderer, $data) {
+    public function render_metadata(Doku_Renderer $renderer, $data)
+    {
         $plugin_name = $this->getPluginName();
 
         $renderer->meta['plugin'][$plugin_name] = $data;
@@ -104,10 +117,11 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin {
     /**
      * Render xhtml
      *
-     * @param Doku_Renderer  $renderer  The renderer
-     * @param array          $data      The data from the handler() function
+     * @param Doku_Renderer $renderer The renderer
+     * @param array         $data     The data from the handler() function
      */
-    public function render_xhtml(Doku_Renderer $renderer, $data) {
+    public function render_xhtml(Doku_Renderer $renderer, $data)
+    {
         global $ID;
         /** @var \DokuWiki_Auth_Plugin $auth */
         global $auth;
@@ -130,31 +144,31 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin {
         }
         $renderer->doc .= '<div id="plugin__watchcycle" ' . $class . '>' . NL;
         $renderer->doc .= '<div class="column">';
-        $renderer->doc  .= inlineSVG(DOKU_PLUGIN . 'watchcycle/admin.svg');
+        $renderer->doc .= inlineSVG(DOKU_PLUGIN . 'watchcycle/admin.svg');
         $renderer->doc .= '</div>';
 
         $renderer->doc .= '<div class="column">';
         $user = $watchcycle['maintainer'];
         $userData = $auth->getUserData($user);
         $maintainer_link = $this->email($userData['mail'], $userData['name']);
-        $renderer->doc .= sprintf($this->getLang('maintained by'), $maintainer_link) . '<br />'. NL;
+        $renderer->doc .= sprintf($this->getLang('maintained by'), $maintainer_link) . '<br />' . NL;
 
 
         if ($watchcycle['changes'] == -1) {
             $renderer->doc .= $this->getLang('never checked');
-            $renderer->doc .= ' (' . $this->getLang('check needed') . ')'.  '<br />'. NL;
+            $renderer->doc .= ' (' . $this->getLang('check needed') . ')' . '<br />' . NL;
         } else {
             $renderer->doc .= sprintf($this->getLang('last check'), $days_ago);
             if ($check_needed) {
                 $renderer->doc .= ' (' . $this->getLang('check needed') . ')';
             }
-            $renderer->doc .= '<br />'. NL;
+            $renderer->doc .= '<br />' . NL;
 
             $urlParameters = ['rev' => $watchcycle['last_maintainer_rev'], 'do' => 'diff'];
             $changes_lang = $this->getLang('change ' . ($watchcycle['changes'] == 1 ? 'singular' : 'plural'));
             $changes_link = $watchcycle['changes'] . ' ' . $changes_lang;
-            $changes_link = '<a href="'.wl($ID, $urlParameters).'">' . $changes_link . '</a>';
-            $renderer->doc .= sprintf($this->getLang('since last check'), $changes_link) . '<br />'. NL;
+            $changes_link = '<a href="' . wl($ID, $urlParameters) . '">' . $changes_link . '</a>';
+            $renderer->doc .= sprintf($this->getLang('since last check'), $changes_link) . '<br />' . NL;
         }
 
         $renderer->doc .= '</div>';

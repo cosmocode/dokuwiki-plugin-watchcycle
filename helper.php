@@ -7,22 +7,12 @@
  */
 
 // must be run within Dokuwiki
-if(!defined('DOKU_INC')) die();
+if (!defined('DOKU_INC')) {
+    die();
+}
 
-class helper_plugin_watchcycle extends DokuWiki_Plugin {
-    /**
-     * @param $time
-     * @param $now
-     *
-     * @return int
-     */
-    public function daysAgo($time, $now=false) {
-        if (!$now) $now = time();
-
-        $diff = ($now - $time) / (60 * 60 * 24);
-        return (int) $diff;
-    }
-
+class helper_plugin_watchcycle extends DokuWiki_Plugin
+{
     /**
      * Create HTML for an icon showing the maintenance status of the provided pageid
      *
@@ -30,7 +20,8 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin {
      *
      * @return string span with inline svg icon and classes
      */
-    public function getSearchResultIconHTML($pageid) {
+    public function getSearchResultIconHTML($pageid)
+    {
         /* @var \DokuWiki_Auth_Plugin $auth */
         global $auth;
 
@@ -67,5 +58,21 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin {
         $icon .= inlineSVG(DOKU_PLUGIN . 'watchcycle/admin.svg');
         $icon .= '</span>';
         return $icon;
+    }
+
+    /**
+     * @param $time
+     * @param $now
+     *
+     * @return int
+     */
+    public function daysAgo($time, $now = false)
+    {
+        if (!$now) {
+            $now = time();
+        }
+
+        $diff = ($now - $time) / (60 * 60 * 24);
+        return (int)$diff;
     }
 }
