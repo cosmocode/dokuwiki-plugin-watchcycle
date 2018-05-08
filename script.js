@@ -58,3 +58,38 @@ function addBtnActionPlugin_watchcycle($btn, props, edid) {
         event.preventDefault();
     });
 }
+
+/**
+ * Add watchcycle_only parameter to search tool links if it is in the search query
+ *
+ * This should ideally be done in the backend, but this is currently (Greebo) not possible. Future DokuWiki release
+ * might include "unknown" search parameter, e.g. those from plugins like this one, by default. Then this can be
+ * removed.
+ */
+jQuery(function () {
+    const $advancedOptions = jQuery('.search-results-form .advancedOptions');
+    if (!$advancedOptions.length) {
+        return;
+    }
+
+    /**\
+     * taken from https://stackoverflow.com/a/31412050/3293343
+     * @param param
+     * @return {*}
+     */
+    function getQueryParam(param) {
+        location.search.substr(1)
+            .split("&")
+            .some(function(item) { // returns first occurence and stops
+                return item.split("=")[0] === param && (param = item.split("=")[1])
+            });
+        return param
+    }
+
+    if (getQueryParam('watchcycle_only') === '1') {
+        $advancedOptions.find('a').each(function (index, element) {
+            const $link = jQuery(element);
+            $link.attr('href', $link.attr('href') + '&watchcycle_only=1');
+        });
+    }
+});
