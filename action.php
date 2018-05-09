@@ -7,27 +7,33 @@
  */
 
 // must be run within Dokuwiki
-if(!defined('DOKU_INC')) die();
+if (!defined('DOKU_INC')) {
+    die();
+}
 
-class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
+class action_plugin_watchcycle extends DokuWiki_Action_Plugin
+{
 
     /**
      * Registers a callback function for a given event
      *
      * @param Doku_Event_Handler $controller DokuWiki's event controller object
+     *
      * @return void
      */
-    public function register(Doku_Event_Handler $controller) {
+    public function register(Doku_Event_Handler $controller)
+    {
 
-       $controller->register_hook('PARSER_METADATA_RENDER', 'AFTER', $this, 'handle_parser_metadata_render');
-       $controller->register_hook('PARSER_CACHE_USE', 'AFTER', $this, 'handle_parser_cache_use');
-       // ensure a page revision is created when summary changes:
-       $controller->register_hook('COMMON_WIKIPAGE_SAVE', 'BEFORE', $this, 'handle_pagesave_before');
-       $controller->register_hook('SEARCH_RESULT_PAGELOOKUP', 'BEFORE', $this, 'addIconToPageLookupResult');
-       $controller->register_hook('SEARCH_RESULT_FULLPAGE', 'BEFORE', $this, 'addIconToFullPageResult');
-       $controller->register_hook('FORM_SEARCH_OUTPUT', 'BEFORE', $this, 'addFilterToSearchForm');
-       $controller->register_hook('SEARCH_QUERY_FULLPAGE', 'AFTER', $this, 'filterSearchResults');
-       $controller->register_hook('SEARCH_QUERY_PAGELOOKUP', 'AFTER', $this, 'filterSearchResults');
+        $controller->register_hook('PARSER_METADATA_RENDER', 'AFTER', $this, 'handle_parser_metadata_render');
+        $controller->register_hook('PARSER_CACHE_USE', 'AFTER', $this, 'handle_parser_cache_use');
+        // ensure a page revision is created when summary changes:
+        $controller->register_hook('COMMON_WIKIPAGE_SAVE', 'BEFORE', $this, 'handle_pagesave_before');
+        $controller->register_hook('SEARCH_RESULT_PAGELOOKUP', 'BEFORE', $this, 'addIconToPageLookupResult');
+        $controller->register_hook('SEARCH_RESULT_FULLPAGE', 'BEFORE', $this, 'addIconToFullPageResult');
+        $controller->register_hook('FORM_SEARCH_OUTPUT', 'BEFORE', $this, 'addFilterToSearchForm');
+        $controller->register_hook('FORM_QUICKSEARCH_OUTPUT', 'BEFORE', $this, 'handle_form_quicksearch_output');
+        $controller->register_hook('SEARCH_QUERY_FULLPAGE', 'AFTER', $this, 'filterSearchResults');
+        $controller->register_hook('SEARCH_QUERY_PAGELOOKUP', 'AFTER', $this, 'filterSearchResults');
 
         $controller->register_hook('TOOLBAR_DEFINE', 'AFTER', $this, 'handle_toolbar_define');
     }
@@ -36,17 +42,19 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
     /**
      * Register a new toolbar button
      *
-     * @param Doku_Event $event event object by reference
-     * @param mixed $param [the parameters passed as fifth argument to register_hook() when this
+     * @param Doku_Event $event  event object by reference
+     * @param mixed      $param  [the parameters passed as fifth argument to register_hook() when this
      *                           handler was registered]
+     *
      * @return void
      */
-    public function handle_toolbar_define(Doku_Event $event, $param) {
-        $event->data[] = array(
+    public function handle_toolbar_define(Doku_Event $event, $param)
+    {
+        $event->data[] = [
             'type' => 'plugin_watchcycle',
             'title' => $this->getLang('title toolbar button'),
             'icon' => '../../plugins/watchcycle/images/eye-plus16Green.png',
-        );
+        ];
     }
 
     /**
@@ -61,7 +69,25 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
         $searchForm = $event->data;
         $advOptionsPos = $searchForm->findPositionByAttribute('class', 'advancedOptions');
         $searchForm->addCheckbox('watchcycle_only', $this->getLang('cb only maintained pages'), $advOptionsPos + 1)
-        ->addClass('plugin__watchcycle_searchform_cb');
+            ->addClass('plugin__watchcycle_searchform_cb');
+    }
+
+    /**
+     * Handles the FORM_QUICKSEARCH_OUTPUT event
+     *
+     * @param Doku_Event $event  event object by reference
+     * @param mixed      $param  [the parameters passed as fifth argument to register_hook() when this
+     *                           handler was registered]
+     *
+     * @return void
+     */
+    public function handle_form_quicksearch_output(Doku_Event $event, $param)
+    {
+        /** @var \dokuwiki\Form\Form $qsearchForm */
+        $qsearchForm = $event->data;
+        if ($this->getConf('default_maintained_only')) {
+            $qsearchForm->setHiddenField('watchcycle_only', '1');
+        }
     }
 
     /**
@@ -88,9 +114,11 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
      * @param Doku_Event $event  event object by reference
      * @param mixed      $param  [the parameters passed as fifth argument to register_hook() when this
      *                           handler was registered]
+     *
      * @return void
      */
-    public function handle_parser_metadata_render(Doku_Event $event, $param) {
+    public function handle_parser_metadata_render(Doku_Event $event, $param)
+    {
         global $ID;
 
         /** @var \helper_plugin_sqlite $sqlite */
@@ -104,7 +132,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
 
         $page = $event->data['current']['last_change']['id'];
 
-        if(isset($event->data['current']['plugin']['watchcycle'])) {
+        if (isset($event->data['current']['plugin']['watchcycle'])) {
             $watchcycle = $event->data['current']['plugin']['watchcycle'];
             $res = $sqlite->query('SELECT * FROM watchcycle WHERE page=?', $page);
             $row = $sqlite->res2row($res);
@@ -122,7 +150,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
 
                 $sqlite->storeEntry('watchcycle', $entry);
             } else { //check if we need to update something
-                $toupdate = array();
+                $toupdate = [];
 
                 if ($row['cycle'] != $watchcycle['cycle']) {
                     $toupdate['cycle'] = $watchcycle['cycle'];
@@ -145,7 +173,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
                 }
 
                 if (count($toupdate) > 0) {
-                    $set = implode(',', array_map(function($v) {
+                    $set = implode(',', array_map(function ($v) {
                         return "$v=?";
                     }, array_keys($toupdate)));
                     $toupdate[] = $page;
@@ -162,10 +190,12 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
     /**
      * @param array  $meta metadata of the page
      * @param string $maintanier
-     * @param int    $rev revision of the last page edition by maintainer or -1 if no edition was made
+     * @param int    $rev  revision of the last page edition by maintainer or -1 if no edition was made
+     *
      * @return int   number of changes since last maintainer's revision or -1 if no changes was made
      */
-    protected function getLastMaintainerRev($meta, $maintanier, &$rev) {
+    protected function getLastMaintainerRev($meta, $maintanier, &$rev)
+    {
 
         $changes = 0;
         if ($meta['current']['last_change']['user'] == $maintanier) {
@@ -199,7 +229,8 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
      * @param string $user name of the maintanier
      * @param string $page that needs checking
      */
-    protected function informMaintainer($user, $page) {
+    protected function informMaintainer($user, $page)
+    {
         /* @var DokuWiki_Auth_Plugin */
         global $auth;
 
@@ -224,10 +255,12 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
      * @param Doku_Event $event  event object by reference
      * @param mixed      $param  [the parameters passed as fifth argument to register_hook() when this
      *                           handler was registered]
+     *
      * @return void
      */
-    public function handle_parser_cache_use(Doku_Event $event, $param) {
-        /* @var \helper_plugin_watchcycle $helper*/
+    public function handle_parser_cache_use(Doku_Event $event, $param)
+    {
+        /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
 
         if ($helper->daysAgo($event->data->_time) >= 1) {
@@ -241,14 +274,18 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
      * @param Doku_Event $event  event object by reference
      * @param mixed      $param  [the parameters passed as fifth argument to register_hook() when this
      *                           handler was registered]
+     *
      * @return void
      */
-    public function handle_pagesave_before(Doku_Event $event, $param) {
-        if($event->data['contentChanged']) return; // will be saved for page changes
+    public function handle_pagesave_before(Doku_Event $event, $param)
+    {
+        if ($event->data['contentChanged']) {
+            return;
+        } // will be saved for page changes
         global $ACT;
 
         //save page if summary is provided
-        if(!empty($event->data['summary'])) {
+        if (!empty($event->data['summary'])) {
             $event->data['contentChanged'] = true;
         }
     }
@@ -261,7 +298,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
      */
     public function addIconToPageLookupResult(Doku_Event $event, $param)
     {
-        /* @var \helper_plugin_watchcycle $helper*/
+        /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
 
         $icon = $helper->getSearchResultIconHTML($event->data['page']);
@@ -278,7 +315,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin {
      */
     public function addIconToFullPageResult(Doku_Event $event, $param)
     {
-        /* @var \helper_plugin_watchcycle $helper*/
+        /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
 
         $icon = $helper->getSearchResultIconHTML($event->data['page']);

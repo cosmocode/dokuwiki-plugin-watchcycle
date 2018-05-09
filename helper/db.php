@@ -8,16 +8,20 @@
 
 // must be run within Dokuwiki
 
-if(!defined('DOKU_INC')) die();
+if (!defined('DOKU_INC')) {
+    die();
+}
 
-class helper_plugin_watchcycle_db extends DokuWiki_Plugin {
+class helper_plugin_watchcycle_db extends DokuWiki_Plugin
+{
     /** @var helper_plugin_sqlite */
     protected $sqlite;
 
     /**
      * helper_plugin_struct_db constructor.
      */
-    public function __construct() {
+    public function __construct()
+    {
         $this->init();
     }
 
@@ -26,42 +30,50 @@ class helper_plugin_watchcycle_db extends DokuWiki_Plugin {
      *
      * @throws Exception
      */
-    protected function init() {
+    protected function init()
+    {
         /** @var helper_plugin_sqlite $sqlite */
         $this->sqlite = plugin_load('helper', 'sqlite');
-        if(!$this->sqlite) {
-            if(defined('DOKU_UNITTEST')) throw new \Exception('Couldn\'t load sqlite.');
+        if (!$this->sqlite) {
+            if (defined('DOKU_UNITTEST')) {
+                throw new \Exception('Couldn\'t load sqlite.');
+            }
             return;
         }
 
-        if($this->sqlite->getAdapter()->getName() != DOKU_EXT_PDO) {
-            if(defined('DOKU_UNITTEST')) throw new \Exception('Couldn\'t load PDO sqlite.');
+        if ($this->sqlite->getAdapter()->getName() != DOKU_EXT_PDO) {
+            if (defined('DOKU_UNITTEST')) {
+                throw new \Exception('Couldn\'t load PDO sqlite.');
+            }
             $this->sqlite = null;
             return;
         }
         $this->sqlite->getAdapter()->setUseNativeAlter(true);
 
         // initialize the database connection
-        if(!$this->sqlite->init('watchcycle', DOKU_PLUGIN . 'watchcycle/db/')) {
-            if(defined('DOKU_UNITTEST')) throw new \Exception('Couldn\'t init sqlite.');
+        if (!$this->sqlite->init('watchcycle', DOKU_PLUGIN . 'watchcycle/db/')) {
+            if (defined('DOKU_UNITTEST')) {
+                throw new \Exception('Couldn\'t init sqlite.');
+            }
             $this->sqlite = null;
             return;
         }
 
         $helper = plugin_load('helper', 'watchcycle');
-        $this->sqlite->create_function('DAYS_AGO', array($helper, 'daysAgo'), 1);
+        $this->sqlite->create_function('DAYS_AGO', [$helper, 'daysAgo'], 1);
     }
 
     /**
      * @return helper_plugin_sqlite|null
      */
-    public function getDB() {
+    public function getDB()
+    {
         global $conf;
         $len = strlen($conf['metadir']);
-        if ($this->sqlite && $conf['metadir'] != substr($this->sqlite->getAdapter()->getDbFile(),0,$len)) {
+        if ($this->sqlite && $conf['metadir'] != substr($this->sqlite->getAdapter()->getDbFile(), 0, $len)) {
             $this->init();
         }
-        if(!$this->sqlite) {
+        if (!$this->sqlite) {
             msg($this->getLang('error sqlite missing'), -1);
             return false;
         }
@@ -73,10 +85,15 @@ class helper_plugin_watchcycle_db extends DokuWiki_Plugin {
      *
      * You do not want to call this except for testing!
      */
-    public function resetDB() {
-        if(!$this->sqlite) return;
+    public function resetDB()
+    {
+        if (!$this->sqlite) {
+            return;
+        }
         $file = $this->sqlite->getAdapter()->getDbFile();
-        if(!$file) return;
+        if (!$file) {
+            return;
+        }
         unlink($file);
         clearstatcache(true, $file);
         $this->init();

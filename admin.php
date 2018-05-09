@@ -7,34 +7,41 @@
  */
 
 // must be run within Dokuwiki
-if(!defined('DOKU_INC')) die();
+if (!defined('DOKU_INC')) {
+    die();
+}
 
-class admin_plugin_watchcycle extends DokuWiki_Admin_Plugin {
+class admin_plugin_watchcycle extends DokuWiki_Admin_Plugin
+{
 
     /**
      * @return int sort number in admin menu
      */
-    public function getMenuSort() {
+    public function getMenuSort()
+    {
         return 1;
     }
 
     /**
      * @return bool true if only access for superuser, false is for superusers and moderators
      */
-    public function forAdminOnly() {
+    public function forAdminOnly()
+    {
         return false;
     }
 
     /**
      * Should carry out any processing required by the plugin.
      */
-    public function handle() {
+    public function handle()
+    {
     }
 
     /**
      * Render HTML output, e.g. helpful text and a form
      */
-    public function html() {
+    public function html()
+    {
         global $ID;
         /* @var Input */
         global $INPUT;
@@ -44,7 +51,7 @@ class admin_plugin_watchcycle extends DokuWiki_Admin_Plugin {
         /* @var \helper_plugin_watchcycle */
         $helper = plugin_load('helper', 'watchcycle');
 
-        ptln('<h1>'.$this->getLang('menu').'</h1>');
+        ptln('<h1>' . $this->getLang('menu') . '</h1>');
 
         ptln('<div id="plugin__watchcycle_admin">');
 
@@ -67,8 +74,11 @@ class admin_plugin_watchcycle extends DokuWiki_Admin_Plugin {
         $headers = ['page', 'maintainer', 'cycle', 'current', 'uptodate'];
         foreach ($headers as $header) {
             $lang = $this->getLang("h $header");
-            $param = ['do' => 'admin', 'page' => 'watchcycle',
-                      'sortby' => $header];
+            $param = [
+                'do' => 'admin',
+                'page' => 'watchcycle',
+                'sortby' => $header,
+            ];
             $icon = '';
             if ($INPUT->str('sortby') == $header) {
                 if ($INPUT->int('desc') == 0) {
@@ -88,7 +98,7 @@ class admin_plugin_watchcycle extends DokuWiki_Admin_Plugin {
         $q_args = [];
         if ($INPUT->str('filter') != '') {
             $where[] = 'page LIKE ?';
-            $q_args[] = '%' . $INPUT->str('filter'). '%';
+            $q_args[] = '%' . $INPUT->str('filter') . '%';
         }
         if ($INPUT->has('outdated')) {
             $where[] = 'uptodate=0';
@@ -107,7 +117,7 @@ class admin_plugin_watchcycle extends DokuWiki_Admin_Plugin {
         }
 
         $res = $sqlite->query($q, $q_args);
-        while($row = $sqlite->res2row($res)) {
+        while ($row = $sqlite->res2row($res)) {
             ptln('<tr>');
             ptln('<td><a href="' . wl($row['page']) . '" class="wikilink1">' . $row['page'] . '</a></td>');
             ptln('<td>' . $row['maintainer'] . '</td>');
