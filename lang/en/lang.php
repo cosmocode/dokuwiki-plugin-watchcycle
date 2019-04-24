@@ -9,7 +9,7 @@
 $lang['menu'] = 'Watchcycle Managment';
 
 // custom language strings for the plugin
-$lang['maintained by'] = 'Maintained by %s.';
+$lang['maintained by'] = 'Maintained by: ';
 $lang['last check'] = 'Last check %d days ago.';
 $lang['check needed'] = 'Check needed!';
 $lang['since last check'] = '%s since last check.';

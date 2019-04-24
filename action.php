@@ -189,28 +189,31 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
 
     /**
      * @param array  $meta metadata of the page
-     * @param string $maintanier
+     * @param string $maintainer
      * @param int    $rev  revision of the last page edition by maintainer or -1 if no edition was made
      *
      * @return int   number of changes since last maintainer's revision or -1 if no changes was made
      */
-    protected function getLastMaintainerRev($meta, $maintanier, &$rev)
+    protected function getLastMaintainerRev($meta, $maintainer, &$rev)
     {
-
         $changes = 0;
-        if ($meta['current']['last_change']['user'] == $maintanier) {
+
+        /* @var \helper_plugin_watchcycle $helper */
+        $helper = plugin_load('helper', 'watchcycle');
+
+        if ($helper->isMaintainer($meta['current']['last_change']['user'], $maintainer)) {
             $rev = $meta['current']['last_change']['date'];
             return $changes;
         } else {
             $page = $meta['current']['last_change']['id'];
-            $changelog = new PageChangeLog($page);
+            $changelog = new PageChangelog($page);
             $first = 0;
             $num = 100;
             while (count($revs = $changelog->getRevisions($first, $num)) > 0) {
                 foreach ($revs as $rev) {
                     $changes += 1;
                     $revInfo = $changelog->getRevisionInfo($rev);
-                    if ($revInfo['user'] == $maintanier) {
+                    if ($helper->isMaintainer($revInfo['user'], $maintainer)) {
                         $rev = $revInfo['date'];
                         return $changes;
                     }

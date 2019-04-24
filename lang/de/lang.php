@@ -7,7 +7,7 @@
 // Menüeintrag für Admin-Plugins
 $lang['menu'] = 'Wiederkehrende Überprüfungen verwalten';
 // custom language strings for the plugin
-$lang['maintained by'] = 'Wird überprüft von %s.';
+$lang['maintained by'] = 'Wird überprüft von: ';
 $lang['last check'] = 'Letzte Überprüfung vor %d Tagen.';
 $lang['check needed'] = 'Überprüfung benötigt!';
 $lang['since last check'] = '%s seit letzter Überprüfung.';
