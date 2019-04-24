@@ -128,13 +128,15 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
             if (strpos($item, '@') !== false) {
                 $found['groups'][] = $item;
             } else {
-                $found['users'][] = $auth->getUserData($item);
+                $found['users'][$item] = $auth->getUserData($item);
             }
         }
 
         switch ($format) {
             case self::MAINTAINERS_FLAT:
                 return $this->flattenMaintainers($found);
+            case self::MAINTAINERS_EXPANDED:
+                return $this->expandMaintainers($found);
         }
 
         return $found;
@@ -180,5 +182,29 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
         }, $all['users']);
 
         return array_merge($users, $all['groups']);
+    }
+
+    /**
+     * Expands groups into users; useful for email notification
+     *
+     * @param array $all
+     * @return array
+     */
+    protected function expandMaintainers($all)
+    {
+        if (empty($all['groups'])) {
+            return $all;
+        }
+
+        /* @var DokuWiki_Auth_Plugin $auth */
+        global $auth;
+
+        $members = array();
+        foreach ($all['groups'] as $group) {
+            $members = array_merge($members, $auth->retrieveUsers(0, 0, array('grps' => ltrim($group, '@'))));
+        }
+
+        // merge eliminates any duplicates since we use string keys
+        return array_merge($all['users'], $members);
     }
 }

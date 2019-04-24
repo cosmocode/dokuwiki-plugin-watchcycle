@@ -227,28 +227,21 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     }
 
     /**
-     * inform the maintanier that the page needs checking
+     * Inform all maintainers that the page needs checking
      *
-     * @param string $user name of the maintanier
+     * @param string $def defined maintainers
      * @param string $page that needs checking
      */
-    protected function informMaintainer($user, $page)
+    protected function informMaintainer($def, $page)
     {
-        /* @var DokuWiki_Auth_Plugin */
+        /* @var DokuWiki_Auth_Plugin $auth */
         global $auth;
 
-        $data = $auth->getUserData($user);
-
-        $mailer = new Mailer();
-        $mailer->to($data['mail']);
-        $mailer->subject($this->getLang('mail subject'));
-        $text = sprintf($this->getLang('mail body'), $page);
-        $link = '<a href="' . wl($page, '', true) . '">' . $page . '</a>';
-        $html = sprintf($this->getLang('mail body'), $link);
-        $mailer->setBody($text, null, null, $html);
-
-        if (!$mailer->send()) {
-            msg($this->getLang('error mail'), -1);
+        /* @var \helper_plugin_watchcycle $helper */
+        $helper = plugin_load('helper', 'watchcycle');
+        $all = $helper->getMaintainers($def, $helper::MAINTAINERS_EXPANDED);
+        foreach ($all as $data) {
+            $this->sendMail($data, $page);
         }
     }
 
@@ -324,6 +317,27 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
         $icon = $helper->getSearchResultIconHTML($event->data['page']);
         if ($icon) {
             $event->data['resultHeader'][] = $icon;
+        }
+    }
+
+    /**
+     * Sends an email
+     *
+     * @param array $data
+     * @param string $page
+     */
+    protected function sendMail($data, $page)
+    {
+        $mailer = new Mailer();
+        $mailer->to($data['mail']);
+        $mailer->subject($this->getLang('mail subject'));
+        $text = sprintf($this->getLang('mail body'), $page);
+        $link = '<a href="' . wl($page, '', true) . '">' . $page . '</a>';
+        $html = sprintf($this->getLang('mail body'), $link);
+        $mailer->setBody($text, null, null, $html);
+
+        if (!$mailer->send()) {
+            msg($this->getLang('error mail'), -1);
         }
     }
 }
