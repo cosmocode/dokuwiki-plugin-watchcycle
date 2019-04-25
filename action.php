@@ -36,6 +36,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
         $controller->register_hook('SEARCH_QUERY_PAGELOOKUP', 'AFTER', $this, 'filterSearchResults');
 
         $controller->register_hook('TOOLBAR_DEFINE', 'AFTER', $this, 'handle_toolbar_define');
+        $controller->register_hook('AJAX_CALL_UNKNOWN', 'BEFORE', $this, 'handle_ajax');
     }
 
 
@@ -185,6 +186,84 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
         } else { //maybe we've removed the syntax -> delete from the database
             $sqlite->query('DELETE FROM watchcycle WHERE page=?', $page);
         }
+    }
+
+    /**
+     * Returns JSON with filtered users and groups
+     *
+     * @param Doku_Event $event
+     * @param string $param
+     */
+    public function handle_ajax(Doku_Event $event, $param)
+    {
+        if ($event->data != 'plugin_watchcycle') return;
+        $event->preventDefault();
+        $event->stopPropagation();
+        global $conf;
+
+        header('Content-Type: application/json');
+        try {
+            $result = $this->fetchUsersAndGroups();
+        } catch(\Exception $e) {
+            $result = [
+                'error' => $e->getMessage().' '.basename($e->getFile()).':'.$e->getLine()
+            ];
+            if($conf['allowdebug']) {
+                $result['stacktrace'] = $e->getTraceAsString();
+            }
+            http_status(500);
+        }
+
+        $json = new JSON;
+        echo $json->encode($result);
+    }
+
+    /**
+     * Returns filtered users and groups, if supported by the current authentication
+     *
+     * @return array
+     */
+    protected function fetchUsersAndGroups()
+    {
+        global $INPUT;
+        $term = $INPUT->str('term');
+
+        if (empty($term)) return [];
+
+        /* @var DokuWiki_Auth_Plugin $auth */
+        global $auth;
+
+        $users = [];
+        $foundUsers = $auth->retrieveUsers(0, 50, ['user' => $term]);
+        if (!empty($foundUsers)) {
+            $users = array_map(function ($name, $user) use ($term) {
+                return ['label' => $user['name'] . " ($name)", 'value' => $name];
+            }, array_keys($foundUsers), $foundUsers);
+        }
+
+        $groups = [];
+
+        // check cache
+        $cachedGroups = new cache('retrievedGroups', '.txt');
+        if($cachedGroups->useCache(['age' => 30])) {
+            $foundGroups = unserialize($cachedGroups->retrieveCache());
+        } else {
+            $foundGroups = $auth->retrieveGroups(0, 10);
+            $cachedGroups->storeCache(serialize($foundGroups));
+        }
+
+        if (!empty($foundGroups)) {
+            $groups = array_filter(
+                array_map(function ($grp) use ($term) {
+                    // filter groups
+                    if (strpos($grp, $term) !== false) {
+                        return ['label' => '@' . $grp, 'value' => '@' . $grp];
+                    }
+                }, $foundGroups)
+            );
+        }
+
+        return array_merge($users, $groups);
     }
 
     /**

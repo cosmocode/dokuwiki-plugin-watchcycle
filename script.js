@@ -1,4 +1,49 @@
 /**
+ * AJAX request for users and groups
+ * Adapted from Struct plugin
+ *
+ * @param {string} term A configured column in the form schema.name
+ * @param {function} fn Callback on success
+ */
+function ajax_watchcycle(term, fn) {
+    let data = {};
+
+    data['call'] = 'plugin_watchcycle';
+    data['term'] = term;
+
+    jQuery.post(DOKU_BASE + 'lib/exe/ajax.php', data, fn, 'json')
+        .fail(function (result) {
+            if (result.responseJSON) {
+                if (result.responseJSON.stacktrace) {
+                    console.error(result.responseJSON.error + "\n" + result.responseJSON.stacktrace);
+                }
+                alert(result.responseJSON.error);
+            } else {
+                // some fatal error occurred, get a text only version of the response
+                alert(jQuery(result.responseText).text());
+            }
+        });
+}
+
+/**
+ * Autocomplete split helper
+ * @param {string} val
+ * @returns {string}
+ */
+function autcmpl_split(val) {
+    return val.split(/,\s*/);
+}
+
+/**
+ * Autocomplete helper returns last part of comma separated string
+ * @param {string} term
+ * @returns {string}
+ */
+function autcmpl_extractLast(term) {
+    return autcmpl_split(term).pop();
+}
+
+/**
  * Attaches the mechanics on our plugin's button
  *
  * @param {jQuery} $btn the button itself
@@ -38,13 +83,35 @@ function addBtnActionPlugin_watchcycle($btn, props, edid) {
     });
     $watchCycleForm.append($cancelButton);
 
+    // multi-value autocompletion
+    $watchCycleForm.find('input#plugin__watchcycle_user_input').autocomplete({
+        source: function (request, cb) {
+            ajax_watchcycle(autcmpl_extractLast(request.term), cb);
+        },
+        focus: function() {
+            // prevent value inserted on focus
+            return false;
+        },
+        select: function(event, ui) {
+            const terms = autcmpl_split(this.value);
+            // remove the current input
+            terms.pop();
+            // add the selected item
+            terms.push(ui.item.value);
+            // add placeholder to get the comma-and-space at the end
+            terms.push("");
+            this.value = terms.join(", ");
+            return false;
+        }
+    });
+
     $watchCycleForm.on('submit', function (event) {
         event.preventDefault();
 
-        const username = $picker.find('[name="watchcycle_user"]').val();
+        const maintainers = $picker.find('[name="watchcycle_user"]').val().replace(new RegExp("[, ]+?$"), "");
         const cycle = $picker.find('[name="watchcycle_cycle"]').val();
 
-        pickerInsert('~~WATCHCYCLE:' + username + ':' + cycle + '~~', edid);
+        pickerInsert('~~WATCHCYCLE:' + maintainers + ':' + cycle + '~~', edid);
 
         $watchCycleForm.get(0).reset();
     });
