@@ -2,14 +2,15 @@
  * AJAX request for users and groups
  * Adapted from Struct plugin
  *
- * @param {string} term A configured column in the form schema.name
  * @param {function} fn Callback on success
+ * @param {string} id Call identifier
+ * @param {string} param Pass the parameter to backend
  */
-function ajax_watchcycle(term, fn) {
+function ajax_watchcycle(fn, id, param) {
     let data = {};
 
-    data['call'] = 'plugin_watchcycle';
-    data['term'] = term;
+    data['call'] = 'plugin_watchcycle_' + id;
+    data['param'] = param;
 
     jQuery.post(DOKU_BASE + 'lib/exe/ajax.php', data, fn, 'json')
         .fail(function (result) {
@@ -86,7 +87,7 @@ function addBtnActionPlugin_watchcycle($btn, props, edid) {
     // multi-value autocompletion
     $watchCycleForm.find('input#plugin__watchcycle_user_input').autocomplete({
         source: function (request, cb) {
-            ajax_watchcycle(autcmpl_extractLast(request.term), cb);
+            ajax_watchcycle(cb, 'get', autcmpl_extractLast(request.term));
         },
         focus: function() {
             // prevent value inserted on focus
@@ -107,13 +108,22 @@ function addBtnActionPlugin_watchcycle($btn, props, edid) {
 
     $watchCycleForm.on('submit', function (event) {
         event.preventDefault();
-
+        $picker.find(".error").remove();
         const maintainers = $picker.find('[name="watchcycle_user"]').val().replace(new RegExp("[, ]+?$"), "");
+
+
         const cycle = $picker.find('[name="watchcycle_cycle"]').val();
 
-        pickerInsert('~~WATCHCYCLE:' + maintainers + ':' + cycle + '~~', edid);
+        // validate maintainers
+        ajax_watchcycle(function (result) {
+            if (result === true) {
+                pickerInsert('~~WATCHCYCLE:' + maintainers + ':' + cycle + '~~', edid);
+                $watchCycleForm.get(0).reset();
+            } else {
+                $picker.find("form").append('<div class="error">' + l10n.invalid_maintainers + '</div>');
+            }
+        }, 'validate', maintainers);
 
-        $watchCycleForm.get(0).reset();
     });
 
     $picker.append($watchCycleForm).append($watchCycleForm);

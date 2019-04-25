@@ -35,3 +35,4 @@ $lang['js']['label_username'] = 'Benutzername';
 $lang['js']['label_cycle_length'] = 'Intervall für Überprüfung';
 $lang['js']['button_insert'] = 'Einfügen';
 $lang['js']['button_cancel'] = 'Abbrechen';
+$lang['js']['invalid_maintainers'] = 'Prüfer ungültig!';

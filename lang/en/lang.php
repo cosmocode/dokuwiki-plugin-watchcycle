@@ -44,5 +44,6 @@ $lang['js']['label_username'] = 'username';
 $lang['js']['label_cycle_length'] = 'cycle length';
 $lang['js']['button_insert'] = 'Insert';
 $lang['js']['button_cancel'] = 'Cancel';
+$lang['js']['invalid_maintainers'] = 'Invalid maintainers!';
 
 //Setup VIM: ex: et ts=4 :

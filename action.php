@@ -36,7 +36,8 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
         $controller->register_hook('SEARCH_QUERY_PAGELOOKUP', 'AFTER', $this, 'filterSearchResults');
 
         $controller->register_hook('TOOLBAR_DEFINE', 'AFTER', $this, 'handle_toolbar_define');
-        $controller->register_hook('AJAX_CALL_UNKNOWN', 'BEFORE', $this, 'handle_ajax');
+        $controller->register_hook('AJAX_CALL_UNKNOWN', 'BEFORE', $this, 'handle_ajax_get');
+        $controller->register_hook('AJAX_CALL_UNKNOWN', 'BEFORE', $this, 'handle_ajax_validate');
     }
 
 
@@ -194,9 +195,9 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      * @param Doku_Event $event
      * @param string $param
      */
-    public function handle_ajax(Doku_Event $event, $param)
+    public function handle_ajax_get(Doku_Event $event, $param)
     {
-        if ($event->data != 'plugin_watchcycle') return;
+        if ($event->data != 'plugin_watchcycle_get') return;
         $event->preventDefault();
         $event->stopPropagation();
         global $conf;
@@ -219,6 +220,32 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     }
 
     /**
+     * JSON result of validation of maintainers definition
+     *
+     * @param Doku_Event $event
+     * @param $param
+     */
+    public function handle_ajax_validate(Doku_Event $event, $param)
+    {
+        if ($event->data != 'plugin_watchcycle_validate') return;
+        $event->preventDefault();
+        $event->stopPropagation();
+
+        global $INPUT;
+        $maintainers = $INPUT->str('param');
+
+        if (empty($maintainers)) return;
+
+        header('Content-Type: application/json');
+        $json = new JSON;
+
+        /* @var \helper_plugin_watchcycle $helper */
+        $helper = plugin_load('helper', 'watchcycle');
+
+        echo $json->encode($helper->validateMaintainerString($maintainers));
+    }
+
+    /**
      * Returns filtered users and groups, if supported by the current authentication
      *
      * @return array
@@ -226,7 +253,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     protected function fetchUsersAndGroups()
     {
         global $INPUT;
-        $term = $INPUT->str('term');
+        $term = $INPUT->str('param');
 
         if (empty($term)) return [];
 
