@@ -1,50 +1,4 @@
 /**
- * AJAX request for users and groups
- * Adapted from Struct plugin
- *
- * @param {function} fn Callback on success
- * @param {string} id Call identifier
- * @param {string} param Pass the parameter to backend
- */
-function ajax_watchcycle(fn, id, param) {
-    let data = {};
-
-    data['call'] = 'plugin_watchcycle_' + id;
-    data['param'] = param;
-
-    jQuery.post(DOKU_BASE + 'lib/exe/ajax.php', data, fn, 'json')
-        .fail(function (result) {
-            if (result.responseJSON) {
-                if (result.responseJSON.stacktrace) {
-                    console.error(result.responseJSON.error + "\n" + result.responseJSON.stacktrace);
-                }
-                alert(result.responseJSON.error);
-            } else {
-                // some fatal error occurred, get a text only version of the response
-                alert(jQuery(result.responseText).text());
-            }
-        });
-}
-
-/**
- * Autocomplete split helper
- * @param {string} val
- * @returns {string}
- */
-function autcmpl_split(val) {
-    return val.split(/,\s*/);
-}
-
-/**
- * Autocomplete helper returns last part of comma separated string
- * @param {string} term
- * @returns {string}
- */
-function autcmpl_extractLast(term) {
-    return autcmpl_split(term).pop();
-}
-
-/**
  * Attaches the mechanics on our plugin's button
  *
  * @param {jQuery} $btn the button itself
@@ -62,6 +16,50 @@ function addBtnActionPlugin_watchcycle($btn, props, edid) {
     ;
     window.pickercounter += 1;
     const l10n = LANG.plugins.watchcycle;
+
+    /**
+     * AJAX request for users and groups
+     * Adapted from Struct plugin
+     *
+     * @param {function} fn Callback on success
+     * @param {string} id Call identifier
+     * @param {string} param Pass the parameter to backend
+     */
+    const ajax_watchcycle = function(fn, id, param) {
+        let data = {};
+
+        data['call'] = 'plugin_watchcycle_' + id;
+        data['param'] = param;
+
+        jQuery.post(DOKU_BASE + 'lib/exe/ajax.php', data, fn, 'json')
+            .fail(function (result) {
+                if (result.responseJSON) {
+                    if (result.responseJSON.stacktrace) {
+                        console.error(result.responseJSON.error + "\n" + result.responseJSON.stacktrace);
+                    }
+                    alert(result.responseJSON.error);
+                }
+            });
+    };
+
+    /**
+     * Autocomplete split helper
+     * @param {string} val
+     * @returns {string}
+     */
+    const autcmpl_split = function(val) {
+        return val.split(/,\s*/);
+    };
+
+    /**
+     * Autocomplete helper returns last part of comma separated string
+     * @param {string} term
+     * @returns {string}
+     */
+    const autcmpl_extractLast = function(term) {
+        return autcmpl_split(term).pop();
+    };
+
     const $watchCycleForm = jQuery('<form>');
     const usernameHTML =
         '<div>' +
