@@ -36,6 +36,8 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
         $controller->register_hook('SEARCH_QUERY_PAGELOOKUP', 'AFTER', $this, 'filterSearchResults');
 
         $controller->register_hook('TOOLBAR_DEFINE', 'AFTER', $this, 'handle_toolbar_define');
+        $controller->register_hook('AJAX_CALL_UNKNOWN', 'BEFORE', $this, 'handle_ajax_get');
+        $controller->register_hook('AJAX_CALL_UNKNOWN', 'BEFORE', $this, 'handle_ajax_validate');
     }
 
 
@@ -188,29 +190,134 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     }
 
     /**
+     * Returns JSON with filtered users and groups
+     *
+     * @param Doku_Event $event
+     * @param string $param
+     */
+    public function handle_ajax_get(Doku_Event $event, $param)
+    {
+        if ($event->data != 'plugin_watchcycle_get') return;
+        $event->preventDefault();
+        $event->stopPropagation();
+        global $conf;
+
+        header('Content-Type: application/json');
+        try {
+            $result = $this->fetchUsersAndGroups();
+        } catch(\Exception $e) {
+            $result = [
+                'error' => $e->getMessage().' '.basename($e->getFile()).':'.$e->getLine()
+            ];
+            if($conf['allowdebug']) {
+                $result['stacktrace'] = $e->getTraceAsString();
+            }
+            http_status(500);
+        }
+
+        echo json_encode($result);
+    }
+
+    /**
+     * JSON result of validation of maintainers definition
+     *
+     * @param Doku_Event $event
+     * @param $param
+     */
+    public function handle_ajax_validate(Doku_Event $event, $param)
+    {
+        if ($event->data != 'plugin_watchcycle_validate') return;
+        $event->preventDefault();
+        $event->stopPropagation();
+
+        global $INPUT;
+        $maintainers = $INPUT->str('param');
+
+        if (empty($maintainers)) return;
+
+        header('Content-Type: application/json');
+
+        /* @var \helper_plugin_watchcycle $helper */
+        $helper = plugin_load('helper', 'watchcycle');
+
+        echo json_encode($helper->validateMaintainerString($maintainers));
+    }
+
+    /**
+     * Returns filtered users and groups, if supported by the current authentication
+     *
+     * @return array
+     */
+    protected function fetchUsersAndGroups()
+    {
+        global $INPUT;
+        $term = $INPUT->str('param');
+
+        if (empty($term)) return [];
+
+        /* @var DokuWiki_Auth_Plugin $auth */
+        global $auth;
+
+        $users = [];
+        $foundUsers = $auth->retrieveUsers(0, 50, ['user' => $term]);
+        if (!empty($foundUsers)) {
+            $users = array_map(function ($name, $user) use ($term) {
+                return ['label' => $user['name'] . " ($name)", 'value' => $name];
+            }, array_keys($foundUsers), $foundUsers);
+        }
+
+        $groups = [];
+
+        // check cache
+        $cachedGroups = new cache('retrievedGroups', '.txt');
+        if($cachedGroups->useCache(['age' => 30])) {
+            $foundGroups = unserialize($cachedGroups->retrieveCache());
+        } else {
+            $foundGroups = $auth->retrieveGroups();
+            $cachedGroups->storeCache(serialize($foundGroups));
+        }
+
+        if (!empty($foundGroups)) {
+            $groups = array_filter(
+                array_map(function ($grp) use ($term) {
+                    // filter groups
+                    if (strpos($grp, $term) !== false) {
+                        return ['label' => '@' . $grp, 'value' => '@' . $grp];
+                    }
+                }, $foundGroups)
+            );
+        }
+
+        return array_merge($users, $groups);
+    }
+
+    /**
      * @param array  $meta metadata of the page
-     * @param string $maintanier
+     * @param string $maintainer
      * @param int    $rev  revision of the last page edition by maintainer or -1 if no edition was made
      *
      * @return int   number of changes since last maintainer's revision or -1 if no changes was made
      */
-    protected function getLastMaintainerRev($meta, $maintanier, &$rev)
+    protected function getLastMaintainerRev($meta, $maintainer, &$rev)
     {
-
         $changes = 0;
-        if ($meta['current']['last_change']['user'] == $maintanier) {
+
+        /* @var \helper_plugin_watchcycle $helper */
+        $helper = plugin_load('helper', 'watchcycle');
+
+        if ($helper->isMaintainer($meta['current']['last_change']['user'], $maintainer)) {
             $rev = $meta['current']['last_change']['date'];
             return $changes;
         } else {
             $page = $meta['current']['last_change']['id'];
-            $changelog = new PageChangeLog($page);
+            $changelog = new PageChangelog($page);
             $first = 0;
             $num = 100;
             while (count($revs = $changelog->getRevisions($first, $num)) > 0) {
                 foreach ($revs as $rev) {
                     $changes += 1;
                     $revInfo = $changelog->getRevisionInfo($rev);
-                    if ($revInfo['user'] == $maintanier) {
+                    if ($helper->isMaintainer($revInfo['user'], $maintainer)) {
                         $rev = $revInfo['date'];
                         return $changes;
                     }
@@ -224,28 +331,21 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     }
 
     /**
-     * inform the maintanier that the page needs checking
+     * Inform all maintainers that the page needs checking
      *
-     * @param string $user name of the maintanier
+     * @param string $def defined maintainers
      * @param string $page that needs checking
      */
-    protected function informMaintainer($user, $page)
+    protected function informMaintainer($def, $page)
     {
-        /* @var DokuWiki_Auth_Plugin */
+        /* @var DokuWiki_Auth_Plugin $auth */
         global $auth;
 
-        $data = $auth->getUserData($user);
-
-        $mailer = new Mailer();
-        $mailer->to($data['mail']);
-        $mailer->subject($this->getLang('mail subject'));
-        $text = sprintf($this->getLang('mail body'), $page);
-        $link = '<a href="' . wl($page, '', true) . '">' . $page . '</a>';
-        $html = sprintf($this->getLang('mail body'), $link);
-        $mailer->setBody($text, null, null, $html);
-
-        if (!$mailer->send()) {
-            msg($this->getLang('error mail'), -1);
+        /* @var \helper_plugin_watchcycle $helper */
+        $helper = plugin_load('helper', 'watchcycle');
+        $all = $helper->getMaintainers($def, $helper::MAINTAINERS_EXPANDED);
+        foreach ($all as $data) {
+            $this->sendMail($data, $page);
         }
     }
 
@@ -321,6 +421,27 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
         $icon = $helper->getSearchResultIconHTML($event->data['page']);
         if ($icon) {
             $event->data['resultHeader'][] = $icon;
+        }
+    }
+
+    /**
+     * Sends an email
+     *
+     * @param array $data
+     * @param string $page
+     */
+    protected function sendMail($data, $page)
+    {
+        $mailer = new Mailer();
+        $mailer->to($data['mail']);
+        $mailer->subject($this->getLang('mail subject'));
+        $text = sprintf($this->getLang('mail body'), $page);
+        $link = '<a href="' . wl($page, '', true) . '">' . $page . '</a>';
+        $html = sprintf($this->getLang('mail body'), $link);
+        $mailer->setBody($text, null, null, $html);
+
+        if (!$mailer->send()) {
+            msg($this->getLang('error mail'), -1);
         }
     }
 }

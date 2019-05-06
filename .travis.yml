@@ -11,10 +11,5 @@ env:
   - DOKUWIKI=stable
 before_install: wget https://raw.github.com/splitbrain/dokuwiki-travis/master/travis.sh
 install: sh travis.sh
-before_script:
-  - wget https://phar.phpunit.de/phpunit-5.7.phar
-  - cd _test
 script:
-  - testrunner=phpunit
-  - if [ "$DOKUWIKI" != "master" ]; then testrunner='php ../phpunit-5.7.phar'; fi
-  - $($testrunner --stderr --group plugin_watchcycle)
+  - cd _test && ./phpunit.phar --stderr --group plugin_watchcycle

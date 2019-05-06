@@ -47,7 +47,7 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin
      * @param int          $pos     The position in the document
      * @param Doku_Handler $handler The handler
      *
-     * @return array Data for the renderer
+     * @return bool|array Data for the renderer
      */
     public function handle($match, $state, $pos, Doku_Handler $handler)
     {
@@ -67,8 +67,10 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin
 
         list($maintainer, $cycle) = array_map('trim', explode(':', $match));
 
-        if ($auth->getUserData($maintainer) === false) {
-            msg('watchcycle: maintainer must be a dokuwiki user', -1);
+        /* @var \helper_plugin_watchcycle $helper */
+        $helper = plugin_load('helper', 'watchcycle');
+        if ($helper->validateMaintainerString($maintainer) === false) {
+            msg($this->getLang('error invalid maintainers'), -1);
             return false;
         }
 
@@ -148,10 +150,7 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin
         $renderer->doc .= '</div>';
 
         $renderer->doc .= '<div class="column">';
-        $user = $watchcycle['maintainer'];
-        $userData = $auth->getUserData($user);
-        $maintainer_link = $this->email($userData['mail'], $userData['name']);
-        $renderer->doc .= sprintf($this->getLang('maintained by'), $maintainer_link) . '<br />' . NL;
+        $renderer->doc .= $this->getMaintainerHtml($watchcycle['maintainer']);
 
 
         if ($watchcycle['changes'] == -1) {
@@ -176,6 +175,32 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin
         $renderer->doc .= '</div>';
     }
 
+    /**
+     * Returns a formatted maintainers string with mailto links.
+     *
+     * @param string $def
+     * @return string
+     */
+    protected function getMaintainerHtml($def)
+    {
+        /* @var \helper_plugin_watchcycle $helper */
+        $helper = plugin_load('helper', 'watchcycle');
+
+        $all = $helper->getMaintainers($def);
+        $flat = array();
+        if (!empty($all['users'])) {
+            foreach ($all['users'] as $user) {
+                $flat[] = $this->email($user['mail'], $user['name']);
+            }
+        }
+        if (!empty($all['groups'])) {
+            foreach ($all['groups'] as $group) {
+                $flat[] = $group;
+            }
+        }
+
+        return sprintf($this->getLang('maintained by'), implode(', ', $flat)) . '<br />' . NL;
+    }
 }
 
 // vim:ts=4:sw=4:et:
