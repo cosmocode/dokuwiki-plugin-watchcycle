@@ -273,7 +273,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
         if($cachedGroups->useCache(['age' => 30])) {
             $foundGroups = unserialize($cachedGroups->retrieveCache());
         } else {
-            $foundGroups = $auth->retrieveGroups(0, 10);
+            $foundGroups = $auth->retrieveGroups();
             $cachedGroups->storeCache(serialize($foundGroups));
         }
 
