@@ -215,8 +215,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
             http_status(500);
         }
 
-        $json = new JSON;
-        echo $json->encode($result);
+        echo json_encode($result);
     }
 
     /**
@@ -237,12 +236,11 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
         if (empty($maintainers)) return;
 
         header('Content-Type: application/json');
-        $json = new JSON;
 
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
 
-        echo $json->encode($helper->validateMaintainerString($maintainers));
+        echo json_encode($helper->validateMaintainerString($maintainers));
     }
 
     /**
