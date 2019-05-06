@@ -70,7 +70,7 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
         if ($helper->validateMaintainerString($maintainer) === false) {
-            msg('watchcycle: maintainer must be a dokuwiki user or an existing group', -1);
+            msg($this->getLang('error invalid maintainers'), -1);
             return false;
         }
 
@@ -186,8 +186,6 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
 
-        $html = $this->getLang('maintained by');
-
         $all = $helper->getMaintainers($def);
         $flat = array();
         if (!empty($all['users'])) {
@@ -201,11 +199,7 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin
             }
         }
 
-        $html .= implode(', ', $flat);
-        $html .= '.';
-        $html .= '<br />' . NL;
-
-        return $html;
+        return sprintf($this->getLang('maintained by'), implode(', ', $flat)) . '<br />' . NL;
     }
 }
 
