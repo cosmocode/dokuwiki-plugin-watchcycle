@@ -47,7 +47,7 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin
      * @param int          $pos     The position in the document
      * @param Doku_Handler $handler The handler
      *
-     * @return array Data for the renderer
+     * @return bool|array Data for the renderer
      */
     public function handle($match, $state, $pos, Doku_Handler $handler)
     {
