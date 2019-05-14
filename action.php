@@ -139,17 +139,18 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
             $res = $sqlite->query('SELECT * FROM watchcycle WHERE page=?', $page);
             $row = $sqlite->res2row($res);
             $changes = $this->getLastMaintainerRev($event->data, $watchcycle['maintainer'], $last_maintainer_rev);
-            //false if page needs checking
+            //0 if page needs checking
             $uptodate = $helper->daysAgo($last_maintainer_rev) <= $watchcycle['cycle'] ? '1' : '0';
+
+            if ($uptodate == '0') {
+                $this->informMaintainer($watchcycle['maintainer'], $ID);
+            }
+
             if (!$row) {
                 $entry = $watchcycle;
                 $entry['page'] = $page;
                 $entry['last_maintainer_rev'] = $last_maintainer_rev;
                 $entry['uptodate'] = $uptodate;
-                if ($uptodate == '0') {
-                    $this->informMaintainer($watchcycle['maintainer'], $ID);
-                }
-
                 $sqlite->storeEntry('watchcycle', $entry);
             } else { //check if we need to update something
                 $toupdate = [];
@@ -169,9 +170,6 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
                 //uptodate value has chaned
                 if ($row['uptodate'] != $uptodate) {
                     $toupdate['uptodate'] = $uptodate;
-                    if (!$uptodate) {
-                        $this->informMaintainer($watchcycle['maintainer'], $ID);
-                    }
                 }
 
                 if (count($toupdate) > 0) {
