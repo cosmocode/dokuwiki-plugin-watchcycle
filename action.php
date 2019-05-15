@@ -139,10 +139,10 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
             $res = $sqlite->query('SELECT * FROM watchcycle WHERE page=?', $page);
             $row = $sqlite->res2row($res);
             $changes = $this->getLastMaintainerRev($event->data, $watchcycle['maintainer'], $last_maintainer_rev);
-            //0 if page needs checking
-            $uptodate = $helper->daysAgo($last_maintainer_rev) <= $watchcycle['cycle'] ? '1' : '0';
+            //false if page needs checking
+            $uptodate = $helper->daysAgo($last_maintainer_rev) <= (int)$watchcycle['cycle'];
 
-            if ($uptodate == '0') {
+            if ($uptodate === false) {
                 $this->informMaintainer($watchcycle['maintainer'], $ID);
             }
 
@@ -150,7 +150,8 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
                 $entry = $watchcycle;
                 $entry['page'] = $page;
                 $entry['last_maintainer_rev'] = $last_maintainer_rev;
-                $entry['uptodate'] = $uptodate;
+                // uptodate is an int in the database
+                $entry['uptodate'] = (int)$uptodate;
                 $sqlite->storeEntry('watchcycle', $entry);
             } else { //check if we need to update something
                 $toupdate = [];
@@ -167,8 +168,8 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
                     $toupdate['last_maintainer_rev'] = $last_maintainer_rev;
                 }
 
-                //uptodate value has chaned
-                if ($row['uptodate'] != $uptodate) {
+                //uptodate value has changed? compare with the string we got from the database
+                if ($row['uptodate'] !== (string)$uptodate) {
                     $toupdate['uptodate'] = $uptodate;
                 }
 
