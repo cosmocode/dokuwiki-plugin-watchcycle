@@ -28,6 +28,7 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
     {
         /* @var \DokuWiki_Auth_Plugin $auth */
         global $auth;
+        if ($auth === null) return '';
 
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
@@ -44,7 +45,7 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
         }
 
         $all = $this->getMaintainers($watchcycle['maintainer'], self::MAINTAINERS_FLAT);
-        $title = $this->getLang('maintained by') . implode(', ', $all). ' ';
+        $title = $this->getLang('maintained by') . implode(', ', $all) . ' ';
 
         if ($watchcycle['changes'] === -1) {
             $title .= $this->getLang('never checked');
@@ -90,13 +91,14 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
     {
         /* @var DokuWiki_Auth_Plugin $auth */
         global $auth;
+        if ($auth === null) return false; // no valid auth setup
 
         $all = explode(',', $def);
         foreach ($all as $item) {
             $item = trim($item);
             if (strpos($item, '@') !== false) {
                 // check if group exists
-                if (empty($auth->retrieveUsers(0,1, array('grps' => ltrim($item, '@'))))) {
+                if (empty($auth->retrieveUsers(0, 1, array('grps' => ltrim($item, '@'))))) {
                     return false;
                 }
             } else {
@@ -121,6 +123,7 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
         global $auth;
 
         $found = array('users' => array(), 'groups' => array());
+        if ($auth === null) return $found;
 
         $all = explode(',', $def);
         foreach ($all as $item) {
@@ -151,6 +154,7 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
     {
         /* @var DokuWiki_Auth_Plugin $auth */
         global $auth;
+        if ($auth === null) return false;
         $userData = $auth->getUserData($user);
 
         $all = explode(',', $def);
@@ -177,7 +181,7 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
             return $all;
         }
 
-        $users = array_map(function($user) {
+        $users = array_map(function ($user) {
             return $user['name'];
         }, $all['users']);
 
@@ -198,6 +202,7 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
 
         /* @var DokuWiki_Auth_Plugin $auth */
         global $auth;
+        if ($auth === null) return [];
 
         $members = array();
         foreach ($all['groups'] as $group) {
