@@ -342,9 +342,9 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
 
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
-        $all = $helper->getMaintainers($def, $helper::MAINTAINERS_EXPANDED);
-        foreach ($all as $data) {
-            $this->sendMail($data, $page);
+        $mails = $helper->getMaintainerMails($def);
+        foreach ($mails as $mail) {
+            $this->sendMail($mail, $page);
         }
     }
 
@@ -426,13 +426,13 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     /**
      * Sends an email
      *
-     * @param array $data
+     * @param array $mail
      * @param string $page
      */
-    protected function sendMail($data, $page)
+    protected function sendMail($mail, $page)
     {
         $mailer = new Mailer();
-        $mailer->to($data['mail']);
+        $mailer->to($mail);
         $mailer->subject($this->getLang('mail subject'));
         $text = sprintf($this->getLang('mail body'), $page);
         $link = '<a href="' . wl($page, '', true) . '">' . $page . '</a>';

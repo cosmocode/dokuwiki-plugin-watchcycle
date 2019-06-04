@@ -188,14 +188,11 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin
 
         $all = $helper->getMaintainers($def);
         $flat = array();
-        if (!empty($all['users'])) {
-            foreach ($all['users'] as $user) {
-                $flat[] = $this->email($user['mail'], $user['name']);
-            }
-        }
-        if (!empty($all['groups'])) {
-            foreach ($all['groups'] as $group) {
-                $flat[] = $group;
+        foreach($all as $name => $info) {
+            if(is_array($info)) {
+                $flat[] = $this->email($info['mail'], $info['name']);
+            }elseif($info === null) {
+                $flat[] = $name;
             }
         }
 

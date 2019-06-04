@@ -44,8 +44,8 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
             $check_needed = true;
         }
 
-        $all = $this->getMaintainers($watchcycle['maintainer'], self::MAINTAINERS_FLAT);
-        $title = $this->getLang('maintained by') . implode(', ', $all) . ' ';
+        $all = $this->getMaintainers($watchcycle['maintainer']);
+        $title = $this->getLang('maintained by') . implode(', ', array_keys($all)) . ' ';
 
         if ($watchcycle['changes'] === -1) {
             $title .= $this->getLang('never checked');
@@ -111,38 +111,62 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
     }
 
     /**
-     * Returns an array of users and groups as specified in the maintainer string
+     * Returns a parsed representation of the maintainer string
      *
-     * @param string $def
-     * @param int $format
+     * keys are the user and group names, value is either:
+     *
+     *  - the user data array
+     *  - null for groups
+     *  - false for unknown users
+     *
+     * @param string $def maintainer definition as given in the syntax
      * @return array
      */
-    public function getMaintainers($def, $format = self::MAINTAINERS_RAW)
+    public function getMaintainers($def)
     {
         /* @var DokuWiki_Auth_Plugin $auth */
         global $auth;
 
-        $found = array('users' => array(), 'groups' => array());
+        $found = [];
         if ($auth === null) return $found;
 
         $all = explode(',', $def);
         foreach ($all as $item) {
             $item = trim($item);
-            if (strpos($item, '@') !== false) {
-                $found['groups'][] = $item;
+            if ($item[0] === '@') {
+                $found[$item] = null; // no detail info on groups
             } else {
-                $found['users'][$item] = $auth->getUserData($item);
+                $found[$item] = $auth->getUserData($item);
             }
         }
 
-        switch ($format) {
-            case self::MAINTAINERS_FLAT:
-                return $this->flattenMaintainers($found);
-            case self::MAINTAINERS_EXPANDED:
-                return $this->expandMaintainers($found);
+        return $found;
+    }
+
+    /**
+     * @param string $def maintainer definition as given in the syntax
+     * @return string[] list of email addresses to inform
+     */
+    public function getMaintainerMails($def)
+    {
+        /* @var DokuWiki_Auth_Plugin $auth */
+        global $auth;
+        if (!$auth) return [];
+
+        $data = $this->getMaintainers($def);
+        $mails = [];
+        foreach ($data as $name => $info) {
+            if (is_array($info)) {
+                $mails[] = $info['mail'];
+            } elseif ($name[0] === '@' && $auth->canDo('getUsers')) {
+                $members = $auth->retrieveUsers(0, 0, array('grps' => ltrim($name, '@')));
+                foreach ($members as $user) {
+                    $mails[] = $user['mail'];
+                }
+            }
         }
 
-        return $found;
+        return array_values(array_unique($mails));
     }
 
     /**
