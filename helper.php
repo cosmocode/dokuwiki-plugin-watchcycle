@@ -155,6 +155,7 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
         /* @var DokuWiki_Auth_Plugin $auth */
         global $auth;
         if ($auth === null) return false;
+        if ($user === '') return false;
         $userData = $auth->getUserData($user);
 
         $all = explode(',', $def);
