@@ -169,8 +169,8 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
                 }
 
                 //uptodate value has changed? compare with the string we got from the database
-                if ($row['uptodate'] !== (string)$uptodate) {
-                    $toupdate['uptodate'] = $uptodate;
+                if ($row['uptodate'] !== (string)(int)$uptodate) {
+                    $toupdate['uptodate'] = (int)$uptodate;
                 }
 
                 if (count($toupdate) > 0) {
