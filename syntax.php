@@ -97,7 +97,11 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin
 
         $method = "render_$mode";
         if (method_exists($this, $method)) {
-            call_user_func([$this, $method], $renderer, $data);
+            if ($mode === 'text') {
+                call_user_func([$this, $method], $renderer->doc, $mode);
+            } else {
+                call_user_func([$this, $method], $renderer, $data);
+            }
             return true;
         }
         return false;
