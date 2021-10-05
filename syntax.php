@@ -36,7 +36,7 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin
      */
     public function connectTo($mode)
     {
-        $this->Lexer->addSpecialPattern('~~WATCHCYCLE.*~~', $mode, 'plugin_watchcycle');
+        $this->Lexer->addSpecialPattern('~~WATCHCYCLE.*?~~', $mode, 'plugin_watchcycle');
     }
 
     /**
