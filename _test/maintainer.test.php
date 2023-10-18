@@ -15,7 +15,7 @@ class maintainer_plugin_watchcycle_test extends DokuWikiTest
      * copy over our own test users
      * @inheritDoc
      */
-    public static function setUpBeforeClass()
+    public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
         TestUtils::rcopy(TMP_DIR, __DIR__ . '/conf');
