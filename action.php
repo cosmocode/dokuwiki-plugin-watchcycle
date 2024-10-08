@@ -1,15 +1,13 @@
 <?php
+
+use dokuwiki\plugin\sqlite\SQLiteDB;
+
 /**
  * DokuWiki Plugin watchcycle (Action Component)
  *
  * @license GPL 2 http://www.gnu.org/licenses/gpl-2.0.html
  * @author  Szymon Olewniczak <dokuwiki@cosmocode.de>
  */
-
-// must be run within Dokuwiki
-if (!defined('DOKU_INC')) {
-    die();
-}
 
 class action_plugin_watchcycle extends DokuWiki_Action_Plugin
 {
@@ -123,12 +121,12 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     {
         global $ID;
 
-        /** @var \helper_plugin_sqlite $sqlite */
-        $sqlite = plugin_load('helper', 'watchcycle_db')->getDB();
-        if (!$sqlite) {
-            msg($this->getLang('error sqlite missing'), -1);
-            return;
-        }
+        /** @var \helper_plugin_watchcycle_db $dbHelper */
+        $dbHelper = plugin_load('helper', 'watchcycle_db');
+
+        /** @var SQLiteDB */
+        $sqlite = $dbHelper->getDB();
+
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
 
@@ -136,8 +134,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
 
         if (isset($event->data['current']['plugin']['watchcycle'])) {
             $watchcycle = $event->data['current']['plugin']['watchcycle'];
-            $res = $sqlite->query('SELECT * FROM watchcycle WHERE page=?', $page);
-            $row = $sqlite->res2row($res);
+            $row = $sqlite->queryRecord('SELECT * FROM watchcycle WHERE page=?', $page);
             $changes = $this->getLastMaintainerRev($event->data, $watchcycle['maintainer'], $last_maintainer_rev);
             //false if page needs checking
             $uptodate = $helper->daysAgo($last_maintainer_rev) <= (int)$watchcycle['cycle'];
@@ -152,7 +149,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
                 $entry['last_maintainer_rev'] = $last_maintainer_rev;
                 // uptodate is an int in the database
                 $entry['uptodate'] = (int)$uptodate;
-                $sqlite->storeEntry('watchcycle', $entry);
+                $sqlite->saveRecord('watchcycle', $entry);
             } else { //check if we need to update something
                 $toupdate = [];
 
@@ -168,8 +165,8 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
                     $toupdate['last_maintainer_rev'] = $last_maintainer_rev;
                 }
 
-                //uptodate value has changed? compare with the string we got from the database
-                if ($row['uptodate'] !== (string)(int)$uptodate) {
+                //uptodate value has changed?
+                if ($row['uptodate'] !== (int)$uptodate) {
                     $toupdate['uptodate'] = (int)$uptodate;
                 }
 
@@ -178,7 +175,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
                         return "$v=?";
                     }, array_keys($toupdate)));
                     $toupdate[] = $page;
-                    $sqlite->query("UPDATE watchcycle SET $set WHERE page=?", $toupdate);
+                    $sqlite->query("UPDATE watchcycle SET $set WHERE page=?", array_values($toupdate));
                 }
             }
             $event->data['current']['plugin']['watchcycle']['last_maintainer_rev'] = $last_maintainer_rev;
@@ -337,9 +334,6 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      */
     protected function informMaintainer($def, $page)
     {
-        /* @var DokuWiki_Auth_Plugin $auth */
-        global $auth;
-
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
         $mails = $helper->getMaintainerMails($def);
