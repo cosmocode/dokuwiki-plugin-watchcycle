@@ -140,7 +140,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
             $uptodate = $helper->daysAgo($last_maintainer_rev) <= (int)$watchcycle['cycle'];
 
             if ($uptodate === false) {
-                $this->informMaintainer($watchcycle['maintainer'], $ID);
+                $helper->informMaintainer($watchcycle['maintainer'], $ID);
             }
 
             if (!$row) {
@@ -327,22 +327,6 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     }
 
     /**
-     * Inform all maintainers that the page needs checking
-     *
-     * @param string $def defined maintainers
-     * @param string $page that needs checking
-     */
-    protected function informMaintainer($def, $page)
-    {
-        /* @var \helper_plugin_watchcycle $helper */
-        $helper = plugin_load('helper', 'watchcycle');
-        $mails = $helper->getMaintainerMails($def);
-        foreach ($mails as $mail) {
-            $this->sendMail($mail, $page);
-        }
-    }
-
-    /**
      * clean the cache every 24 hours
      *
      * @param Doku_Event $event  event object by reference
@@ -414,27 +398,6 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
         $icon = $helper->getSearchResultIconHTML($event->data['page']);
         if ($icon) {
             $event->data['resultHeader'][] = $icon;
-        }
-    }
-
-    /**
-     * Sends an email
-     *
-     * @param array $mail
-     * @param string $page
-     */
-    protected function sendMail($mail, $page)
-    {
-        $mailer = new Mailer();
-        $mailer->to($mail);
-        $mailer->subject($this->getLang('mail subject'));
-        $text = sprintf($this->getLang('mail body'), $page);
-        $link = '<a href="' . wl($page, '', true) . '">' . $page . '</a>';
-        $html = sprintf($this->getLang('mail body'), $link);
-        $mailer->setBody($text, null, null, $html);
-
-        if (!$mailer->send()) {
-            msg($this->getLang('error mail'), -1);
         }
     }
 }

@@ -95,30 +95,8 @@ class admin_plugin_watchcycle extends DokuWiki_Admin_Plugin
             echo '<th><a href="' . $href . '">' . $icon . ' ' . $lang . '</a></th>';
         }
 
-        $q = 'SELECT page, maintainer, cycle, DAYS_AGO(last_maintainer_rev) AS current, uptodate FROM watchcycle';
-        $where = [];
-        $q_args = [];
-        if ($INPUT->str('filter') != '') {
-            $where[] = 'page LIKE ?';
-            $q_args[] = '%' . $INPUT->str('filter') . '%';
-        }
-        if ($INPUT->has('outdated')) {
-            $where[] = 'uptodate=0';
-        }
+        $rows = $dbHelper->getAll($headers);
 
-        if (count($where) > 0) {
-            $q .= ' WHERE ';
-            $q .= implode(' AND ', $where);
-        }
-
-        if ($INPUT->has('sortby') && in_array($INPUT->str('sortby'), $headers)) {
-            $q .= ' ORDER BY ' . $INPUT->str('sortby');
-            if ($INPUT->int('desc') == 1) {
-                $q .= ' DESC';
-            }
-        }
-
-        $rows = $sqlite->queryAll($q, $q_args);
         foreach ($rows as $row) {
             echo '<tr>';
             echo '<td><a href="' . wl($row['page']) . '" class="wikilink1">' . $row['page'] . '</a></td>';

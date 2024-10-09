@@ -17,6 +17,11 @@ class helper_plugin_watchcycle_db extends Plugin
     /** @var SQLiteDB */
     protected $sqlite;
 
+    public function __construct()
+    {
+        $this->init();
+    }
+
     /**
      * Initialize the database
      *
@@ -39,7 +44,7 @@ class helper_plugin_watchcycle_db extends Plugin
     {
         if (!$this->sqlite instanceof SQLiteDB) {
             if (!class_exists(SQLiteDB::class)) {
-                if ($throw || defined('DOKU_UNITTEST')) throw new StructException('no sqlite');
+                if ($throw || defined('DOKU_UNITTEST')) throw new Exception('no sqlite');
                 return null;
             }
 
@@ -52,5 +57,39 @@ class helper_plugin_watchcycle_db extends Plugin
             }
         }
         return $this->sqlite;
+    }
+
+    /**
+     * @param array $headers
+     * @return array
+     */
+    public function getAll(array $headers = [])
+    {
+        global $INPUT;
+
+        $q = 'SELECT page, maintainer, cycle, DAYS_AGO(last_maintainer_rev) AS current, uptodate FROM watchcycle';
+        $where = [];
+        $q_args = [];
+        if ($INPUT->str('filter') != '') {
+            $where[] = 'page LIKE ?';
+            $q_args[] = '%' . $INPUT->str('filter') . '%';
+        }
+        if ($INPUT->has('outdated')) {
+            $where[] = 'uptodate=0';
+        }
+
+        if (count($where) > 0) {
+            $q .= ' WHERE ';
+            $q .= implode(' AND ', $where);
+        }
+
+        if ($INPUT->has('sortby') && in_array($INPUT->str('sortby'), $headers)) {
+            $q .= ' ORDER BY ' . $INPUT->str('sortby');
+            if ($INPUT->int('desc') == 1) {
+                $q .= ' DESC';
+            }
+        }
+
+        return $this->sqlite->queryAll($q, $q_args);
     }
 }
