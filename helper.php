@@ -1,4 +1,5 @@
 <?php
+
 /**
  * DokuWiki Plugin struct (Helper Component)
  *
@@ -6,16 +7,11 @@
  * @author  Szymon Olewniczak <dokuwiki@cosmocode.de>
  */
 
-// must be run within Dokuwiki
-if (!defined('DOKU_INC')) {
-    die();
-}
-
 class helper_plugin_watchcycle extends DokuWiki_Plugin
 {
-    const MAINTAINERS_RAW = 0;
-    const MAINTAINERS_FLAT = 1;
-    const MAINTAINERS_EXPANDED = 2;
+    public const MAINTAINERS_RAW = 0;
+    public const MAINTAINERS_FLAT = 1;
+    public const MAINTAINERS_EXPANDED = 2;
 
     /**
      * Create HTML for an icon showing the maintenance status of the provided pageid
@@ -149,8 +145,9 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
      */
     public function getMaintainerMails($def)
     {
-        /* @var DokuWiki_Auth_Plugin $auth */
+        /* @var \dokuwiki\Extension\AuthPlugin $auth */
         global $auth;
+        $auth = $auth ?? auth_setup();
         if (!$auth) return [];
 
         $data = $this->getMaintainers($def);
@@ -193,6 +190,41 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
         }
 
         return false;
+    }
+
+    /**
+     * Inform all maintainers that the page needs checking
+     *
+     * @param string $def defined maintainers
+     * @param string $page that needs checking
+     */
+    public function informMaintainer($def, $page)
+    {
+        $mails = $this->getMaintainerMails($def);
+        foreach ($mails as $mail) {
+            $this->sendMail($mail, $page);
+        }
+    }
+
+    /**
+     * Sends an email
+     *
+     * @param array $mail
+     * @param string $page
+     */
+    protected function sendMail($mail, $page)
+    {
+        $mailer = new Mailer();
+        $mailer->to($mail);
+        $mailer->subject($this->getLang('mail subject'));
+        $text = sprintf($this->getLang('mail body'), $page);
+        $link = '<a href="' . wl($page, '', true) . '">' . $page . '</a>';
+        $html = sprintf($this->getLang('mail body'), $link);
+        $mailer->setBody($text, null, null, $html);
+
+        if (!$mailer->send()) {
+            msg($this->getLang('error mail'), -1);
+        }
     }
 
     /**

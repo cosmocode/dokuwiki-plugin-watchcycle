@@ -1,4 +1,9 @@
 <?php
+
+use dokuwiki\Form\Form;
+use dokuwiki\Form\InputElement;
+use dokuwiki\plugin\sqlite\SQLiteDB;
+
 /**
  * DokuWiki Plugin watchcycle (Admin Component)
  *
@@ -6,14 +11,8 @@
  * @author  Szymon Olewniczak <dokuwiki@cosmocode.de>
  */
 
-// must be run within Dokuwiki
-if (!defined('DOKU_INC')) {
-    die();
-}
-
 class admin_plugin_watchcycle extends DokuWiki_Admin_Plugin
 {
-
     /**
      * @return int sort number in admin menu
      */
@@ -46,17 +45,18 @@ class admin_plugin_watchcycle extends DokuWiki_Admin_Plugin
         /* @var Input */
         global $INPUT;
 
-        /** @var \helper_plugin_sqlite $sqlite */
-        $sqlite = plugin_load('helper', 'watchcycle_db')->getDB();
-        /* @var \helper_plugin_watchcycle */
-        $helper = plugin_load('helper', 'watchcycle');
+        /** @var \helper_plugin_watchcycle_db $dbHelper */
+        $dbHelper = plugin_load('helper', 'watchcycle_db');
 
-        ptln('<h1>' . $this->getLang('menu') . '</h1>');
+        /** @var SQLiteDB */
+        $sqlite = $dbHelper->getDB();
 
-        ptln('<div id="plugin__watchcycle_admin">');
+        echo '<h1>' . $this->getLang('menu') . '</h1>';
 
-        $form = new \dokuwiki\Form\Form();
-        $filter_input = new \dokuwiki\Form\InputElement('text', 'filter');
+        echo '<div id="plugin__watchcycle_admin">';
+
+        $form = new Form();
+        $filter_input = new InputElement('text', 'filter');
         $filter_input->attr('placeholder', $this->getLang('search page'));
         $form->addElement($filter_input);
 
@@ -68,9 +68,9 @@ class admin_plugin_watchcycle extends DokuWiki_Admin_Plugin
         $form->addHTML('</label>');
 
 
-        ptln($form->toHTML());
-        ptln('<table>');
-        ptln('<tr>');
+        echo $form->toHTML();
+        echo '<table>';
+        echo '<tr>';
         $headers = ['page', 'maintainer', 'cycle', 'current', 'uptodate'];
         foreach ($headers as $header) {
             $lang = $this->getLang("h $header");
@@ -91,48 +91,24 @@ class admin_plugin_watchcycle extends DokuWiki_Admin_Plugin
             }
             $href = wl($ID, $param);
 
-            ptln('<th><a href="' . $href . '">' . $icon . ' ' . $lang . '</a></th>');
-        }
-        $q = 'SELECT page, maintainer, cycle, DAYS_AGO(last_maintainer_rev) AS current, uptodate FROM watchcycle';
-        $where = [];
-        $q_args = [];
-        if ($INPUT->str('filter') != '') {
-            $where[] = 'page LIKE ?';
-            $q_args[] = '%' . $INPUT->str('filter') . '%';
-        }
-        if ($INPUT->has('outdated')) {
-            $where[] = 'uptodate=0';
+            echo '<th><a href="' . $href . '">' . $icon . ' ' . $lang . '</a></th>';
         }
 
-        if (count($where) > 0) {
-            $q .= ' WHERE ';
-            $q .= implode(' AND ', $where);
-        }
+        $rows = $dbHelper->getAll($headers);
 
-        if ($INPUT->has('sortby') && in_array($INPUT->str('sortby'), $headers)) {
-            $q .= ' ORDER BY ' . $INPUT->str('sortby');
-            if ($INPUT->int('desc') == 1) {
-                $q .= ' DESC';
-            }
-        }
-
-        $res = $sqlite->query($q, $q_args);
-        while ($row = $sqlite->res2row($res)) {
-            ptln('<tr>');
-            ptln('<td><a href="' . wl($row['page']) . '" class="wikilink1">' . $row['page'] . '</a></td>');
-            ptln('<td>' . $row['maintainer'] . '</td>');
-            ptln('<td>' . $row['cycle'] . '</td>');
-            ptln('<td>' . $row['current'] . '</td>');
+        foreach ($rows as $row) {
+            echo '<tr>';
+            echo '<td><a href="' . wl($row['page']) . '" class="wikilink1">' . $row['page'] . '</a></td>';
+            echo '<td>' . $row['maintainer'] . '</td>';
+            echo '<td>' . $row['cycle'] . '</td>';
+            echo '<td>' . $row['current'] . '</td>';
             $icon = $row['uptodate'] == 1 ? '✓' : '✕';
-            ptln('<td>' . $icon . '</td>');
-            ptln('</tr>');
+            echo '<td>' . $icon . '</td>';
+            echo '</tr>';
         }
 
-        ptln('</tr>');
-        ptln('</table>');
-
-        ptln('</div>');
+        echo '</tr>';
+        echo '</table>';
+        echo '</div>';
     }
 }
-
-// vim:ts=4:sw=4:et:

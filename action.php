@@ -1,4 +1,7 @@
 <?php
+
+use dokuwiki\plugin\sqlite\SQLiteDB;
+
 /**
  * DokuWiki Plugin watchcycle (Action Component)
  *
@@ -6,14 +9,8 @@
  * @author  Szymon Olewniczak <dokuwiki@cosmocode.de>
  */
 
-// must be run within Dokuwiki
-if (!defined('DOKU_INC')) {
-    die();
-}
-
 class action_plugin_watchcycle extends DokuWiki_Action_Plugin
 {
-
     /**
      * Registers a callback function for a given event
      *
@@ -24,20 +21,20 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     public function register(Doku_Event_Handler $controller)
     {
 
-        $controller->register_hook('PARSER_METADATA_RENDER', 'AFTER', $this, 'handle_parser_metadata_render');
-        $controller->register_hook('PARSER_CACHE_USE', 'AFTER', $this, 'handle_parser_cache_use');
+        $controller->register_hook('PARSER_METADATA_RENDER', 'AFTER', $this, 'handleParserMetadataRender');
+        $controller->register_hook('PARSER_CACHE_USE', 'AFTER', $this, 'handleParserCacheUse');
         // ensure a page revision is created when summary changes:
-        $controller->register_hook('COMMON_WIKIPAGE_SAVE', 'BEFORE', $this, 'handle_pagesave_before');
+        $controller->register_hook('COMMON_WIKIPAGE_SAVE', 'BEFORE', $this, 'handlePagesaveBefore');
         $controller->register_hook('SEARCH_RESULT_PAGELOOKUP', 'BEFORE', $this, 'addIconToPageLookupResult');
         $controller->register_hook('SEARCH_RESULT_FULLPAGE', 'BEFORE', $this, 'addIconToFullPageResult');
         $controller->register_hook('FORM_SEARCH_OUTPUT', 'BEFORE', $this, 'addFilterToSearchForm');
-        $controller->register_hook('FORM_QUICKSEARCH_OUTPUT', 'BEFORE', $this, 'handle_form_quicksearch_output');
+        $controller->register_hook('FORM_QUICKSEARCH_OUTPUT', 'BEFORE', $this, 'handleFormQuicksearchOutput');
         $controller->register_hook('SEARCH_QUERY_FULLPAGE', 'AFTER', $this, 'filterSearchResults');
         $controller->register_hook('SEARCH_QUERY_PAGELOOKUP', 'AFTER', $this, 'filterSearchResults');
 
-        $controller->register_hook('TOOLBAR_DEFINE', 'AFTER', $this, 'handle_toolbar_define');
-        $controller->register_hook('AJAX_CALL_UNKNOWN', 'BEFORE', $this, 'handle_ajax_get');
-        $controller->register_hook('AJAX_CALL_UNKNOWN', 'BEFORE', $this, 'handle_ajax_validate');
+        $controller->register_hook('TOOLBAR_DEFINE', 'AFTER', $this, 'handleToolbarDefine');
+        $controller->register_hook('AJAX_CALL_UNKNOWN', 'BEFORE', $this, 'handleAjaxGet');
+        $controller->register_hook('AJAX_CALL_UNKNOWN', 'BEFORE', $this, 'handleAjaxValidate');
     }
 
 
@@ -50,7 +47,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      *
      * @return void
      */
-    public function handle_toolbar_define(Doku_Event $event, $param)
+    public function handleToolbarDefine(Doku_Event $event, $param)
     {
         $event->data[] = [
             'type' => 'plugin_watchcycle',
@@ -83,7 +80,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      *
      * @return void
      */
-    public function handle_form_quicksearch_output(Doku_Event $event, $param)
+    public function handleFormQuicksearchOutput(Doku_Event $event, $param)
     {
         /** @var \dokuwiki\Form\Form $qsearchForm */
         $qsearchForm = $event->data;
@@ -119,16 +116,16 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      *
      * @return void
      */
-    public function handle_parser_metadata_render(Doku_Event $event, $param)
+    public function handleParserMetadataRender(Doku_Event $event, $param)
     {
         global $ID;
 
-        /** @var \helper_plugin_sqlite $sqlite */
-        $sqlite = plugin_load('helper', 'watchcycle_db')->getDB();
-        if (!$sqlite) {
-            msg($this->getLang('error sqlite missing'), -1);
-            return;
-        }
+        /** @var \helper_plugin_watchcycle_db $dbHelper */
+        $dbHelper = plugin_load('helper', 'watchcycle_db');
+
+        /** @var SQLiteDB */
+        $sqlite = $dbHelper->getDB();
+
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
 
@@ -136,14 +133,13 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
 
         if (isset($event->data['current']['plugin']['watchcycle'])) {
             $watchcycle = $event->data['current']['plugin']['watchcycle'];
-            $res = $sqlite->query('SELECT * FROM watchcycle WHERE page=?', $page);
-            $row = $sqlite->res2row($res);
+            $row = $sqlite->queryRecord('SELECT * FROM watchcycle WHERE page=?', $page);
             $changes = $this->getLastMaintainerRev($event->data, $watchcycle['maintainer'], $last_maintainer_rev);
             //false if page needs checking
             $uptodate = $helper->daysAgo($last_maintainer_rev) <= (int)$watchcycle['cycle'];
 
             if ($uptodate === false) {
-                $this->informMaintainer($watchcycle['maintainer'], $ID);
+                $helper->informMaintainer($watchcycle['maintainer'], $ID);
             }
 
             if (!$row) {
@@ -152,7 +148,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
                 $entry['last_maintainer_rev'] = $last_maintainer_rev;
                 // uptodate is an int in the database
                 $entry['uptodate'] = (int)$uptodate;
-                $sqlite->storeEntry('watchcycle', $entry);
+                $sqlite->saveRecord('watchcycle', $entry);
             } else { //check if we need to update something
                 $toupdate = [];
 
@@ -168,8 +164,8 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
                     $toupdate['last_maintainer_rev'] = $last_maintainer_rev;
                 }
 
-                //uptodate value has changed? compare with the string we got from the database
-                if ($row['uptodate'] !== (string)(int)$uptodate) {
+                //uptodate value has changed?
+                if ($row['uptodate'] !== (int)$uptodate) {
                     $toupdate['uptodate'] = (int)$uptodate;
                 }
 
@@ -178,7 +174,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
                         return "$v=?";
                     }, array_keys($toupdate)));
                     $toupdate[] = $page;
-                    $sqlite->query("UPDATE watchcycle SET $set WHERE page=?", $toupdate);
+                    $sqlite->query("UPDATE watchcycle SET $set WHERE page=?", array_values($toupdate));
                 }
             }
             $event->data['current']['plugin']['watchcycle']['last_maintainer_rev'] = $last_maintainer_rev;
@@ -194,7 +190,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      * @param Doku_Event $event
      * @param string $param
      */
-    public function handle_ajax_get(Doku_Event $event, $param)
+    public function handleAjaxGet(Doku_Event $event, $param)
     {
         if ($event->data != 'plugin_watchcycle_get') return;
         $event->preventDefault();
@@ -204,11 +200,11 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
         header('Content-Type: application/json');
         try {
             $result = $this->fetchUsersAndGroups();
-        } catch(\Exception $e) {
+        } catch (\Exception $e) {
             $result = [
-                'error' => $e->getMessage().' '.basename($e->getFile()).':'.$e->getLine()
+                'error' => $e->getMessage() . ' ' . basename($e->getFile()) . ':' . $e->getLine()
             ];
-            if($conf['allowdebug']) {
+            if ($conf['allowdebug']) {
                 $result['stacktrace'] = $e->getTraceAsString();
             }
             http_status(500);
@@ -223,7 +219,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      * @param Doku_Event $event
      * @param $param
      */
-    public function handle_ajax_validate(Doku_Event $event, $param)
+    public function handleAjaxValidate(Doku_Event $event, $param)
     {
         if ($event->data != 'plugin_watchcycle_validate') return;
         $event->preventDefault();
@@ -269,7 +265,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
 
         // check cache
         $cachedGroups = new cache('retrievedGroups', '.txt');
-        if($cachedGroups->useCache(['age' => 30])) {
+        if ($cachedGroups->useCache(['age' => 30])) {
             $foundGroups = unserialize($cachedGroups->retrieveCache());
         } else {
             $foundGroups = $auth->retrieveGroups();
@@ -330,25 +326,6 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     }
 
     /**
-     * Inform all maintainers that the page needs checking
-     *
-     * @param string $def defined maintainers
-     * @param string $page that needs checking
-     */
-    protected function informMaintainer($def, $page)
-    {
-        /* @var DokuWiki_Auth_Plugin $auth */
-        global $auth;
-
-        /* @var \helper_plugin_watchcycle $helper */
-        $helper = plugin_load('helper', 'watchcycle');
-        $mails = $helper->getMaintainerMails($def);
-        foreach ($mails as $mail) {
-            $this->sendMail($mail, $page);
-        }
-    }
-
-    /**
      * clean the cache every 24 hours
      *
      * @param Doku_Event $event  event object by reference
@@ -357,7 +334,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      *
      * @return void
      */
-    public function handle_parser_cache_use(Doku_Event $event, $param)
+    public function handleParserCacheUse(Doku_Event $event, $param)
     {
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
@@ -376,7 +353,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      *
      * @return void
      */
-    public function handle_pagesave_before(Doku_Event $event, $param)
+    public function handlePagesaveBefore(Doku_Event $event, $param)
     {
         if ($event->data['contentChanged']) {
             return;
@@ -422,27 +399,4 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
             $event->data['resultHeader'][] = $icon;
         }
     }
-
-    /**
-     * Sends an email
-     *
-     * @param array $mail
-     * @param string $page
-     */
-    protected function sendMail($mail, $page)
-    {
-        $mailer = new Mailer();
-        $mailer->to($mail);
-        $mailer->subject($this->getLang('mail subject'));
-        $text = sprintf($this->getLang('mail body'), $page);
-        $link = '<a href="' . wl($page, '', true) . '">' . $page . '</a>';
-        $html = sprintf($this->getLang('mail body'), $link);
-        $mailer->setBody($text, null, null, $html);
-
-        if (!$mailer->send()) {
-            msg($this->getLang('error mail'), -1);
-        }
-    }
 }
-
-// vim:ts=4:sw=4:et:

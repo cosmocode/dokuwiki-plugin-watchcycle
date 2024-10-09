@@ -1,25 +1,22 @@
 <?php
+
+use dokuwiki\ErrorHandler;
+use dokuwiki\Extension\Plugin;
+use dokuwiki\plugin\sqlite\SQLiteDB;
+
 /**
  * DokuWiki Plugin watchcycle (Helper Component)
  *
  * @license GPL 2 http://www.gnu.org/licenses/gpl-2.0.html
  * @author  Szymon Olewniczak <dokuwiki@cosmocode.de>
+ * @author  Anna Dabrowska <dokuwiki@cosmocode.de>
  */
 
-// must be run within Dokuwiki
-
-if (!defined('DOKU_INC')) {
-    die();
-}
-
-class helper_plugin_watchcycle_db extends DokuWiki_Plugin
+class helper_plugin_watchcycle_db extends Plugin
 {
-    /** @var helper_plugin_sqlite */
+    /** @var SQLiteDB */
     protected $sqlite;
 
-    /**
-     * helper_plugin_struct_db constructor.
-     */
     public function __construct()
     {
         $this->init();
@@ -32,72 +29,67 @@ class helper_plugin_watchcycle_db extends DokuWiki_Plugin
      */
     protected function init()
     {
-        /** @var helper_plugin_sqlite $sqlite */
-        $this->sqlite = plugin_load('helper', 'sqlite');
-        if (!$this->sqlite) {
-            if (defined('DOKU_UNITTEST')) {
-                throw new \Exception('Couldn\'t load sqlite.');
-            }
-            return;
-        }
-
-        if ($this->sqlite->getAdapter()->getName() != DOKU_EXT_PDO) {
-            if (defined('DOKU_UNITTEST')) {
-                throw new \Exception('Couldn\'t load PDO sqlite.');
-            }
-            $this->sqlite = null;
-            return;
-        }
-        $this->sqlite->getAdapter()->setUseNativeAlter(true);
-
-        // initialize the database connection
-        if (!$this->sqlite->init('watchcycle', DOKU_PLUGIN . 'watchcycle/db/')) {
-            if (defined('DOKU_UNITTEST')) {
-                throw new \Exception('Couldn\'t init sqlite.');
-            }
-            $this->sqlite = null;
-            return;
-        }
+        $this->sqlite = new SQLiteDB('watchcycle', DOKU_PLUGIN . 'watchcycle/db/');
 
         $helper = plugin_load('helper', 'watchcycle');
-        $this->sqlite->create_function('DAYS_AGO', [$helper, 'daysAgo'], 1);
+        $this->sqlite->getPdo()->sqliteCreateFunction('DAYS_AGO', [$helper, 'daysAgo'], 1);
     }
 
     /**
-     * @return helper_plugin_sqlite|null
+     * @param bool $throw throw an Exception when sqlite not available or fails to load
+     * @return SQLiteDB|null
+     * @throws Exception
      */
-    public function getDB()
+    public function getDB($throw = true)
     {
-        global $conf;
-        $len = strlen($conf['metadir']);
-        if ($this->sqlite && $conf['metadir'] != substr($this->sqlite->getAdapter()->getDbFile(), 0, $len)) {
-            $this->init();
-        }
-        if (!$this->sqlite) {
-            msg($this->getLang('error sqlite missing'), -1);
-            return false;
+        if (!$this->sqlite instanceof SQLiteDB) {
+            if (!class_exists(SQLiteDB::class)) {
+                if ($throw || defined('DOKU_UNITTEST')) throw new Exception('no sqlite');
+                return null;
+            }
+
+            try {
+                $this->init();
+            } catch (\Exception $exception) {
+                ErrorHandler::logException($exception);
+                if ($throw) throw $exception;
+                return null;
+            }
         }
         return $this->sqlite;
     }
 
     /**
-     * Completely remove the database and reinitialize it
-     *
-     * You do not want to call this except for testing!
+     * @param array $headers
+     * @return array
      */
-    public function resetDB()
+    public function getAll(array $headers = [])
     {
-        if (!$this->sqlite) {
-            return;
+        global $INPUT;
+
+        $q = 'SELECT page, maintainer, cycle, DAYS_AGO(last_maintainer_rev) AS current, uptodate FROM watchcycle';
+        $where = [];
+        $q_args = [];
+        if ($INPUT->str('filter') != '') {
+            $where[] = 'page LIKE ?';
+            $q_args[] = '%' . $INPUT->str('filter') . '%';
         }
-        $file = $this->sqlite->getAdapter()->getDbFile();
-        if (!$file) {
-            return;
+        if ($INPUT->has('outdated')) {
+            $where[] = 'uptodate=0';
         }
-        unlink($file);
-        clearstatcache(true, $file);
-        $this->init();
+
+        if (count($where) > 0) {
+            $q .= ' WHERE ';
+            $q .= implode(' AND ', $where);
+        }
+
+        if ($INPUT->has('sortby') && in_array($INPUT->str('sortby'), $headers)) {
+            $q .= ' ORDER BY ' . $INPUT->str('sortby');
+            if ($INPUT->int('desc') == 1) {
+                $q .= ' DESC';
+            }
+        }
+
+        return $this->sqlite->queryAll($q, $q_args);
     }
 }
-
-// vim:ts=4:sw=4:et:
