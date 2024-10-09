@@ -11,7 +11,6 @@ use dokuwiki\plugin\sqlite\SQLiteDB;
 
 class action_plugin_watchcycle extends DokuWiki_Action_Plugin
 {
-
     /**
      * Registers a callback function for a given event
      *
@@ -22,20 +21,20 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     public function register(Doku_Event_Handler $controller)
     {
 
-        $controller->register_hook('PARSER_METADATA_RENDER', 'AFTER', $this, 'handle_parser_metadata_render');
-        $controller->register_hook('PARSER_CACHE_USE', 'AFTER', $this, 'handle_parser_cache_use');
+        $controller->register_hook('PARSER_METADATA_RENDER', 'AFTER', $this, 'handleParserMetadataRender');
+        $controller->register_hook('PARSER_CACHE_USE', 'AFTER', $this, 'handleParserCacheUse');
         // ensure a page revision is created when summary changes:
-        $controller->register_hook('COMMON_WIKIPAGE_SAVE', 'BEFORE', $this, 'handle_pagesave_before');
+        $controller->register_hook('COMMON_WIKIPAGE_SAVE', 'BEFORE', $this, 'handlePagesaveBefore');
         $controller->register_hook('SEARCH_RESULT_PAGELOOKUP', 'BEFORE', $this, 'addIconToPageLookupResult');
         $controller->register_hook('SEARCH_RESULT_FULLPAGE', 'BEFORE', $this, 'addIconToFullPageResult');
         $controller->register_hook('FORM_SEARCH_OUTPUT', 'BEFORE', $this, 'addFilterToSearchForm');
-        $controller->register_hook('FORM_QUICKSEARCH_OUTPUT', 'BEFORE', $this, 'handle_form_quicksearch_output');
+        $controller->register_hook('FORM_QUICKSEARCH_OUTPUT', 'BEFORE', $this, 'handleFormQuicksearchOutput');
         $controller->register_hook('SEARCH_QUERY_FULLPAGE', 'AFTER', $this, 'filterSearchResults');
         $controller->register_hook('SEARCH_QUERY_PAGELOOKUP', 'AFTER', $this, 'filterSearchResults');
 
-        $controller->register_hook('TOOLBAR_DEFINE', 'AFTER', $this, 'handle_toolbar_define');
-        $controller->register_hook('AJAX_CALL_UNKNOWN', 'BEFORE', $this, 'handle_ajax_get');
-        $controller->register_hook('AJAX_CALL_UNKNOWN', 'BEFORE', $this, 'handle_ajax_validate');
+        $controller->register_hook('TOOLBAR_DEFINE', 'AFTER', $this, 'handleToolbarDefine');
+        $controller->register_hook('AJAX_CALL_UNKNOWN', 'BEFORE', $this, 'handleAjaxGet');
+        $controller->register_hook('AJAX_CALL_UNKNOWN', 'BEFORE', $this, 'handleAjaxValidate');
     }
 
 
@@ -48,7 +47,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      *
      * @return void
      */
-    public function handle_toolbar_define(Doku_Event $event, $param)
+    public function handleToolbarDefine(Doku_Event $event, $param)
     {
         $event->data[] = [
             'type' => 'plugin_watchcycle',
@@ -81,7 +80,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      *
      * @return void
      */
-    public function handle_form_quicksearch_output(Doku_Event $event, $param)
+    public function handleFormQuicksearchOutput(Doku_Event $event, $param)
     {
         /** @var \dokuwiki\Form\Form $qsearchForm */
         $qsearchForm = $event->data;
@@ -117,7 +116,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      *
      * @return void
      */
-    public function handle_parser_metadata_render(Doku_Event $event, $param)
+    public function handleParserMetadataRender(Doku_Event $event, $param)
     {
         global $ID;
 
@@ -191,7 +190,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      * @param Doku_Event $event
      * @param string $param
      */
-    public function handle_ajax_get(Doku_Event $event, $param)
+    public function handleAjaxGet(Doku_Event $event, $param)
     {
         if ($event->data != 'plugin_watchcycle_get') return;
         $event->preventDefault();
@@ -201,11 +200,11 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
         header('Content-Type: application/json');
         try {
             $result = $this->fetchUsersAndGroups();
-        } catch(\Exception $e) {
+        } catch (\Exception $e) {
             $result = [
-                'error' => $e->getMessage().' '.basename($e->getFile()).':'.$e->getLine()
+                'error' => $e->getMessage() . ' ' . basename($e->getFile()) . ':' . $e->getLine()
             ];
-            if($conf['allowdebug']) {
+            if ($conf['allowdebug']) {
                 $result['stacktrace'] = $e->getTraceAsString();
             }
             http_status(500);
@@ -220,7 +219,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      * @param Doku_Event $event
      * @param $param
      */
-    public function handle_ajax_validate(Doku_Event $event, $param)
+    public function handleAjaxValidate(Doku_Event $event, $param)
     {
         if ($event->data != 'plugin_watchcycle_validate') return;
         $event->preventDefault();
@@ -266,7 +265,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
 
         // check cache
         $cachedGroups = new cache('retrievedGroups', '.txt');
-        if($cachedGroups->useCache(['age' => 30])) {
+        if ($cachedGroups->useCache(['age' => 30])) {
             $foundGroups = unserialize($cachedGroups->retrieveCache());
         } else {
             $foundGroups = $auth->retrieveGroups();
@@ -335,7 +334,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      *
      * @return void
      */
-    public function handle_parser_cache_use(Doku_Event $event, $param)
+    public function handleParserCacheUse(Doku_Event $event, $param)
     {
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
@@ -354,7 +353,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
      *
      * @return void
      */
-    public function handle_pagesave_before(Doku_Event $event, $param)
+    public function handlePagesaveBefore(Doku_Event $event, $param)
     {
         if ($event->data['contentChanged']) {
             return;
@@ -401,5 +400,3 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
         }
     }
 }
-
-// vim:ts=4:sw=4:et:

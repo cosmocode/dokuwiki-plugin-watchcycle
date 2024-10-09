@@ -1,4 +1,9 @@
 <?php
+
+// phpcs:disable PSR1.Methods.CamelCapsMethodName.NotCamelCaps
+
+use dokuwiki\Extension\SyntaxPlugin;
+
 /**
  * DokuWiki Plugin watchcycle (Syntax Component)
  *
@@ -6,12 +11,7 @@
  * @author  Szymon Olewniczak <dokuwiki@cosmocode.de>
  */
 
-// must be run within Dokuwiki
-if (!defined('DOKU_INC')) {
-    die();
-}
-
-class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin
+class syntax_plugin_watchcycle extends SyntaxPlugin
 {
     /**
      * @return string Syntax mode type
@@ -188,10 +188,10 @@ class syntax_plugin_watchcycle extends DokuWiki_Syntax_Plugin
 
         $all = $helper->getMaintainers($def);
         $flat = array();
-        foreach($all as $name => $info) {
-            if(is_array($info)) {
+        foreach ($all as $name => $info) {
+            if (is_array($info)) {
                 $flat[] = $this->email($info['mail'], $info['name']);
-            }elseif($info === null) {
+            } elseif ($info === null) {
                 $flat[] = $name;
             }
         }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * DokuWiki Plugin struct (Helper Component)
  *
@@ -8,9 +9,9 @@
 
 class helper_plugin_watchcycle extends DokuWiki_Plugin
 {
-    const MAINTAINERS_RAW = 0;
-    const MAINTAINERS_FLAT = 1;
-    const MAINTAINERS_EXPANDED = 2;
+    public const MAINTAINERS_RAW = 0;
+    public const MAINTAINERS_FLAT = 1;
+    public const MAINTAINERS_EXPANDED = 2;
 
     /**
      * Create HTML for an icon showing the maintenance status of the provided pageid
