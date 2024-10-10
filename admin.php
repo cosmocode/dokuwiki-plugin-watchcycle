@@ -49,8 +49,6 @@ class admin_plugin_watchcycle extends AdminPlugin
         /** @var \helper_plugin_watchcycle_db $dbHelper */
         $dbHelper = plugin_load('helper', 'watchcycle_db');
 
-        $dbHelper->getDB();
-
         echo '<h1>' . $this->getLang('menu') . '</h1>';
 
         echo '<div id="plugin__watchcycle_admin">';
