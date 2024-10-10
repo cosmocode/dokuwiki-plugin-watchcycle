@@ -1,5 +1,6 @@
 <?php
 
+use dokuwiki\Cache\Cache;
 use dokuwiki\Extension\ActionPlugin;
 use dokuwiki\Extension\EventHandler;
 use dokuwiki\Extension\Event;
@@ -269,7 +270,7 @@ class action_plugin_watchcycle extends ActionPlugin
         $groups = [];
 
         // check cache
-        $cachedGroups = new \dokuwiki\Cache\Cache('retrievedGroups', '.txt');
+        $cachedGroups = new Cache('retrievedGroups', '.txt');
         if ($cachedGroups->useCache(['age' => 30])) {
             $foundGroups = unserialize($cachedGroups->retrieveCache());
         } else {
