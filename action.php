@@ -259,13 +259,17 @@ class action_plugin_watchcycle extends ActionPlugin
         $users = [];
         $foundUsers = $auth->retrieveUsers(0, 50, ['user' => $term]);
         if (!empty($foundUsers)) {
-            $users = array_map(static fn($name, $user) => ['label' => $user['name'] . " ($name)", 'value' => $name], array_keys($foundUsers), $foundUsers);
+            $users = array_map(
+                static fn($name, $user) => ['label' => $user['name'] . " ($name)", 'value' => $name],
+                array_keys($foundUsers),
+                $foundUsers
+            );
         }
 
         $groups = [];
 
         // check cache
-        $cachedGroups = new cache('retrievedGroups', '.txt');
+        $cachedGroups = new \dokuwiki\Cache\Cache('retrievedGroups', '.txt');
         if ($cachedGroups->useCache(['age' => 30])) {
             $foundGroups = unserialize($cachedGroups->retrieveCache());
         } else {
@@ -359,7 +363,6 @@ class action_plugin_watchcycle extends ActionPlugin
         if ($event->data['contentChanged']) {
             return;
         } // will be saved for page changes
-        global $ACT;
 
         //save page if summary is provided
         if (!empty($event->data['summary'])) {
