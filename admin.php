@@ -1,5 +1,6 @@
 <?php
 
+use dokuwiki\Extension\AdminPlugin;
 use dokuwiki\Form\Form;
 use dokuwiki\Form\InputElement;
 use dokuwiki\plugin\sqlite\SQLiteDB;
@@ -11,7 +12,7 @@ use dokuwiki\plugin\sqlite\SQLiteDB;
  * @author  Szymon Olewniczak <dokuwiki@cosmocode.de>
  */
 
-class admin_plugin_watchcycle extends DokuWiki_Admin_Plugin
+class admin_plugin_watchcycle extends AdminPlugin
 {
     /**
      * @return int sort number in admin menu
@@ -48,8 +49,7 @@ class admin_plugin_watchcycle extends DokuWiki_Admin_Plugin
         /** @var \helper_plugin_watchcycle_db $dbHelper */
         $dbHelper = plugin_load('helper', 'watchcycle_db');
 
-        /** @var SQLiteDB */
-        $sqlite = $dbHelper->getDB();
+        $dbHelper->getDB();
 
         echo '<h1>' . $this->getLang('menu') . '</h1>';
 
@@ -58,6 +58,7 @@ class admin_plugin_watchcycle extends DokuWiki_Admin_Plugin
         $form = new Form();
         $filter_input = new InputElement('text', 'filter');
         $filter_input->attr('placeholder', $this->getLang('search page'));
+
         $form->addElement($filter_input);
 
         $form->addButton('', $this->getLang('btn filter'));

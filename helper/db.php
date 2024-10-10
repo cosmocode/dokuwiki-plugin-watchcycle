@@ -42,20 +42,6 @@ class helper_plugin_watchcycle_db extends Plugin
      */
     public function getDB($throw = true)
     {
-        if (!$this->sqlite instanceof SQLiteDB) {
-            if (!class_exists(SQLiteDB::class)) {
-                if ($throw || defined('DOKU_UNITTEST')) throw new Exception('no sqlite');
-                return null;
-            }
-
-            try {
-                $this->init();
-            } catch (\Exception $exception) {
-                ErrorHandler::logException($exception);
-                if ($throw) throw $exception;
-                return null;
-            }
-        }
         return $this->sqlite;
     }
 
@@ -78,7 +64,7 @@ class helper_plugin_watchcycle_db extends Plugin
             $where[] = 'uptodate=0';
         }
 
-        if (count($where) > 0) {
+        if ($where !== []) {
             $q .= ' WHERE ';
             $q .= implode(' AND ', $where);
         }
