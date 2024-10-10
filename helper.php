@@ -1,13 +1,14 @@
 <?php
 
+use dokuwiki\Extension\Plugin;
+
 /**
  * DokuWiki Plugin struct (Helper Component)
  *
  * @license GPL 2 http://www.gnu.org/licenses/gpl-2.0.html
  * @author  Szymon Olewniczak <dokuwiki@cosmocode.de>
  */
-
-class helper_plugin_watchcycle extends DokuWiki_Plugin
+class helper_plugin_watchcycle extends Plugin
 {
     public const MAINTAINERS_RAW = 0;
     public const MAINTAINERS_FLAT = 1;
@@ -94,13 +95,11 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
             $item = trim($item);
             if (strpos($item, '@') !== false) {
                 // check if group exists
-                if (empty($auth->retrieveUsers(0, 1, array('grps' => ltrim($item, '@'))))) {
+                if (empty($auth->retrieveUsers(0, 1, ['grps' => ltrim($item, '@')]))) {
                     return false;
                 }
-            } else {
-                if ($auth->getUserData($item) === false) {
-                    return false;
-                }
+            } elseif ($auth->getUserData($item) === false) {
+                return false;
             }
         }
         return true;
@@ -147,7 +146,7 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
     {
         /* @var \dokuwiki\Extension\AuthPlugin $auth */
         global $auth;
-        $auth = $auth ?? auth_setup();
+        $auth ??= auth_setup();
         if (!$auth) return [];
 
         $data = $this->getMaintainers($def);
@@ -156,7 +155,7 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
             if (is_array($info)) {
                 $mails[] = $info['mail'];
             } elseif ($name[0] === '@' && $auth->canDo('getUsers')) {
-                $members = $auth->retrieveUsers(0, 0, array('grps' => ltrim($name, '@')));
+                $members = $auth->retrieveUsers(0, 0, ['grps' => ltrim($name, '@')]);
                 foreach ($members as $user) {
                     $mails[] = $user['mail'];
                 }
@@ -217,6 +216,7 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
         $mailer = new Mailer();
         $mailer->to($mail);
         $mailer->subject($this->getLang('mail subject'));
+
         $text = sprintf($this->getLang('mail body'), $page);
         $link = '<a href="' . wl($page, '', true) . '">' . $page . '</a>';
         $html = sprintf($this->getLang('mail body'), $link);
@@ -238,9 +238,7 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
             return $all;
         }
 
-        $users = array_map(function ($user) {
-            return $user['name'];
-        }, $all['users']);
+        $users = array_map(static fn($user) => $user['name'], $all['users']);
 
         return array_merge($users, $all['groups']);
     }
@@ -261,9 +259,9 @@ class helper_plugin_watchcycle extends DokuWiki_Plugin
         global $auth;
         if ($auth === null) return [];
 
-        $members = array();
+        $members = [];
         foreach ($all['groups'] as $group) {
-            $members = array_merge($members, $auth->retrieveUsers(0, 0, array('grps' => ltrim($group, '@'))));
+            $members = array_merge($members, $auth->retrieveUsers(0, 0, ['grps' => ltrim($group, '@')]));
         }
 
         // merge eliminates any duplicates since we use string keys

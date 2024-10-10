@@ -65,7 +65,7 @@ class syntax_plugin_watchcycle extends SyntaxPlugin
 
         $match = substr($match, strlen('~~WATCHCYCLE:'), strlen($match) - 2);
 
-        list($maintainer, $cycle) = array_map('trim', explode(':', $match));
+        [$maintainer, $cycle] = array_map('trim', explode(':', $match));
 
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
@@ -187,7 +187,7 @@ class syntax_plugin_watchcycle extends SyntaxPlugin
         $helper = plugin_load('helper', 'watchcycle');
 
         $all = $helper->getMaintainers($def);
-        $flat = array();
+        $flat = [];
         foreach ($all as $name => $info) {
             if (is_array($info)) {
                 $flat[] = $this->email($info['mail'], $info['name']);

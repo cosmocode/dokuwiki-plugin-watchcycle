@@ -1,5 +1,10 @@
 <?php
 
+use dokuwiki\Extension\ActionPlugin;
+use dokuwiki\Extension\EventHandler;
+use dokuwiki\Extension\Event;
+use dokuwiki\Form\Form;
+use dokuwiki\ChangeLog\PageChangeLog;
 use dokuwiki\plugin\sqlite\SQLiteDB;
 
 /**
@@ -9,16 +14,16 @@ use dokuwiki\plugin\sqlite\SQLiteDB;
  * @author  Szymon Olewniczak <dokuwiki@cosmocode.de>
  */
 
-class action_plugin_watchcycle extends DokuWiki_Action_Plugin
+class action_plugin_watchcycle extends ActionPlugin
 {
     /**
      * Registers a callback function for a given event
      *
-     * @param Doku_Event_Handler $controller DokuWiki's event controller object
+     * @param EventHandler $controller DokuWiki's event controller object
      *
      * @return void
      */
-    public function register(Doku_Event_Handler $controller)
+    public function register(EventHandler $controller)
     {
 
         $controller->register_hook('PARSER_METADATA_RENDER', 'AFTER', $this, 'handleParserMetadataRender');
@@ -41,13 +46,13 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     /**
      * Register a new toolbar button
      *
-     * @param Doku_Event $event  event object by reference
+     * @param Event $event event object by reference
      * @param mixed      $param  [the parameters passed as fifth argument to register_hook() when this
      *                           handler was registered]
      *
      * @return void
      */
-    public function handleToolbarDefine(Doku_Event $event, $param)
+    public function handleToolbarDefine(Event $event, $param)
     {
         $event->data[] = [
             'type' => 'plugin_watchcycle',
@@ -59,10 +64,10 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     /**
      * Add a checkbox to the search form to allow limiting the search to maintained pages only
      *
-     * @param Doku_Event $event
+     * @param Event $event
      * @param            $param
      */
-    public function addFilterToSearchForm(Doku_Event $event, $param)
+    public function addFilterToSearchForm(Event $event, $param)
     {
         /* @var \dokuwiki\Form\Form $searchForm */
         $searchForm = $event->data;
@@ -74,15 +79,15 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     /**
      * Handles the FORM_QUICKSEARCH_OUTPUT event
      *
-     * @param Doku_Event $event  event object by reference
+     * @param Event $event event object by reference
      * @param mixed      $param  [the parameters passed as fifth argument to register_hook() when this
      *                           handler was registered]
      *
      * @return void
      */
-    public function handleFormQuicksearchOutput(Doku_Event $event, $param)
+    public function handleFormQuicksearchOutput(Event $event, $param)
     {
-        /** @var \dokuwiki\Form\Form $qsearchForm */
+        /** @var Form $qsearchForm */
         $qsearchForm = $event->data;
         if ($this->getConf('default_maintained_only')) {
             $qsearchForm->setHiddenField('watchcycle_only', '1');
@@ -92,10 +97,10 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     /**
      * Filter the search results to show only maintained pages, if  watchcycle_only is true in $INPUT
      *
-     * @param Doku_Event $event
+     * @param Event $event
      * @param            $param
      */
-    public function filterSearchResults(Doku_Event $event, $param)
+    public function filterSearchResults(Event $event, $param)
     {
         global $INPUT;
         if (!$INPUT->bool('watchcycle_only')) {
@@ -110,13 +115,13 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     /**
      * [Custom event handler which performs action]
      *
-     * @param Doku_Event $event  event object by reference
+     * @param Event $event event object by reference
      * @param mixed      $param  [the parameters passed as fifth argument to register_hook() when this
      *                           handler was registered]
      *
      * @return void
      */
-    public function handleParserMetadataRender(Doku_Event $event, $param)
+    public function handleParserMetadataRender(Event $event, $param)
     {
         global $ID;
 
@@ -169,10 +174,8 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
                     $toupdate['uptodate'] = (int)$uptodate;
                 }
 
-                if (count($toupdate) > 0) {
-                    $set = implode(',', array_map(function ($v) {
-                        return "$v=?";
-                    }, array_keys($toupdate)));
+                if ($toupdate !== []) {
+                    $set = implode(',', array_map(static fn($v) => "$v=?", array_keys($toupdate)));
                     $toupdate[] = $page;
                     $sqlite->query("UPDATE watchcycle SET $set WHERE page=?", array_values($toupdate));
                 }
@@ -187,10 +190,10 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     /**
      * Returns JSON with filtered users and groups
      *
-     * @param Doku_Event $event
+     * @param Event $event
      * @param string $param
      */
-    public function handleAjaxGet(Doku_Event $event, $param)
+    public function handleAjaxGet(Event $event, $param)
     {
         if ($event->data != 'plugin_watchcycle_get') return;
         $event->preventDefault();
@@ -216,10 +219,10 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     /**
      * JSON result of validation of maintainers definition
      *
-     * @param Doku_Event $event
+     * @param Event $event
      * @param $param
      */
-    public function handleAjaxValidate(Doku_Event $event, $param)
+    public function handleAjaxValidate(Event $event, $param)
     {
         if ($event->data != 'plugin_watchcycle_validate') return;
         $event->preventDefault();
@@ -256,9 +259,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
         $users = [];
         $foundUsers = $auth->retrieveUsers(0, 50, ['user' => $term]);
         if (!empty($foundUsers)) {
-            $users = array_map(function ($name, $user) use ($term) {
-                return ['label' => $user['name'] . " ($name)", 'value' => $name];
-            }, array_keys($foundUsers), $foundUsers);
+            $users = array_map(static fn($name, $user) => ['label' => $user['name'] . " ($name)", 'value' => $name], array_keys($foundUsers), $foundUsers);
         }
 
         $groups = [];
@@ -276,7 +277,7 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
             $groups = array_filter(
                 array_map(function ($grp) use ($term) {
                     // filter groups
-                    if (strpos($grp, $term) !== false) {
+                    if (strpos($grp, (string) $term) !== false) {
                         return ['label' => '@' . $grp, 'value' => '@' . $grp];
                     }
                 }, $foundGroups)
@@ -305,12 +306,12 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
             return $changes;
         } else {
             $page = $meta['current']['last_change']['id'];
-            $changelog = new PageChangelog($page);
+            $changelog = new PageChangeLog($page);
             $first = 0;
             $num = 100;
             while (count($revs = $changelog->getRevisions($first, $num)) > 0) {
                 foreach ($revs as $rev) {
-                    $changes += 1;
+                    ++$changes;
                     $revInfo = $changelog->getRevisionInfo($rev);
                     if ($helper->isMaintainer($revInfo['user'], $maintainer)) {
                         $rev = $revInfo['date'];
@@ -328,13 +329,13 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     /**
      * clean the cache every 24 hours
      *
-     * @param Doku_Event $event  event object by reference
+     * @param Event $event event object by reference
      * @param mixed      $param  [the parameters passed as fifth argument to register_hook() when this
      *                           handler was registered]
      *
      * @return void
      */
-    public function handleParserCacheUse(Doku_Event $event, $param)
+    public function handleParserCacheUse(Event $event, $param)
     {
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
@@ -347,13 +348,13 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     /**
      * Check if the page has to be changed
      *
-     * @param Doku_Event $event  event object by reference
+     * @param Event $event event object by reference
      * @param mixed      $param  [the parameters passed as fifth argument to register_hook() when this
      *                           handler was registered]
      *
      * @return void
      */
-    public function handlePagesaveBefore(Doku_Event $event, $param)
+    public function handlePagesaveBefore(Event $event, $param)
     {
         if ($event->data['contentChanged']) {
             return;
@@ -369,10 +370,10 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     /**
      * called for event SEARCH_RESULT_PAGELOOKUP
      *
-     * @param Doku_Event $event
+     * @param Event $event
      * @param            $param
      */
-    public function addIconToPageLookupResult(Doku_Event $event, $param)
+    public function addIconToPageLookupResult(Event $event, $param)
     {
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
@@ -386,10 +387,10 @@ class action_plugin_watchcycle extends DokuWiki_Action_Plugin
     /**
      * called for event SEARCH_RESULT_FULLPAGE
      *
-     * @param Doku_Event $event
+     * @param Event $event
      * @param            $param
      */
-    public function addIconToFullPageResult(Doku_Event $event, $param)
+    public function addIconToFullPageResult(Event $event, $param)
     {
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
