@@ -82,20 +82,20 @@ class syntax_plugin_watchcycle extends SyntaxPlugin
     /**
      * Render xhtml output or metadata
      *
-     * @param string        $mode     Renderer mode (supported modes: xhtml)
+     * @param string        $format   Renderer mode (supported modes: xhtml, meta)
      * @param Doku_Renderer $renderer The renderer
      * @param array         $data     The data from the handler() function
      *
      * @return bool If rendering was successful.
      */
 
-    public function render($mode, Doku_Renderer $renderer, $data)
+    public function render($format, Doku_Renderer $renderer, $data)
     {
-        if (!$data) {
+        if (!$data || !in_array($format, ['xhtml', 'metadata'])) {
             return false;
         }
 
-        $method = "render_$mode";
+        $method = "render_$format";
         if (method_exists($this, $method)) {
             call_user_func([$this, $method], $renderer, $data);
             return true;
