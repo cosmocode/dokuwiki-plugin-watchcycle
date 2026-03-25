@@ -1,7 +1,7 @@
 base   watchcycle
 author Szymon Olewniczak
 email  dokuwiki@cosmocode.de
-date   2024-10-10
+date   2026-03-24
 name   watchcycle plugin
 desc   Manage pages maintenance schedules.
 url    https://www.dokuwiki.org/plugin:watchcycle
