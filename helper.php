@@ -177,11 +177,13 @@ class helper_plugin_watchcycle extends Plugin
         if ($auth === null) return false;
         if ($user === '') return false;
         $userData = $auth->getUserData($user);
+        if (!is_array($userData)) return false;
+        $grps = $userData['grps'] ?? [];
 
         $all = explode(',', $def);
         foreach ($all as $item) {
             $item = trim($item);
-            if (strpos($item, '@') !== false && in_array(ltrim($item, '@'), $userData['grps'])) {
+            if (strpos($item, '@') !== false && in_array(ltrim($item, '@'), $grps)) {
                 return true;
             } elseif ($item === $user) {
                 return true;

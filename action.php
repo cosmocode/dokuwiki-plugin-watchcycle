@@ -135,9 +135,9 @@ class action_plugin_watchcycle extends ActionPlugin
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
 
-        $page = $event->data['current']['last_change']['id'];
+        $page = $event->data['current']['last_change']['id'] ?? $ID;
 
-        if (isset($event->data['current']['plugin']['watchcycle'])) {
+        if ($page && isset($event->data['current']['plugin']['watchcycle'])) {
             $watchcycle = $event->data['current']['plugin']['watchcycle'];
             $row = $sqlite->queryRecord('SELECT * FROM watchcycle WHERE page=?', $page);
             $changes = $this->getLastMaintainerRev($event->data, $watchcycle['maintainer'], $last_maintainer_rev);
