@@ -345,7 +345,7 @@ class action_plugin_watchcycle extends ActionPlugin
         /* @var \helper_plugin_watchcycle $helper */
         $helper = plugin_load('helper', 'watchcycle');
 
-        if ($helper->daysAgo($event->data->_time) >= 1) {
+        if ($helper->daysAgo($event->data->getTime()) >= 1) {
             $event->result = false;
         }
     }
